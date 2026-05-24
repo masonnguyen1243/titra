@@ -5,6 +5,21 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (26) — Phase 2: Shared components — Loading skeleton
+
+**Files created:**
+- `apps/web/components/ui/skeleton.tsx`: base `Skeleton` primitive — a `<div>` with `animate-pulse bg-muted rounded-md` and an optional `className` prop. Follows the shadcn/ui pattern.
+- `apps/web/components/ui/skeletons.tsx`: composed page-level skeleton components for all data-heavy pages:
+  - `EventCardsSkeleton` — grid of event card placeholders (count prop, default 3)
+  - `ExpenseListSkeleton` — list rows with description + badge + meta + amount (rows prop, default 4)
+  - `BalanceSkeleton` — net-position rows with avatar circles + simplified transaction rows (memberCount prop)
+  - `SettlementListSkeleton` — settlement rows with status badge placeholder (rows prop, default 3)
+  - `ChatSkeleton` — alternating incoming/outgoing chat bubble placeholders + pinned input bar
+  - `AdminStatsSkeleton` — three stat card placeholders matching the admin layout
+  - `AdminTableSkeleton` — full `<table>` with thead and tbody rows (rows + cols props, defaults 5/4); first column gets stacked double-line, last column gets a right-aligned button placeholder
+
+---
+
 ## 2026-05-24 (25) — Phase 2: Admin dashboard — Event table
 
 **Files changed:**
