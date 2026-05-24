@@ -5,6 +5,27 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (38) — Phase 3: Auth module — JWT auth guard + role guard
+
+**Files changed:**
+- `apps/api/src/auth/types/jwt-payload.interface.ts` *(new)*: `JwtPayload` interface `{ sub, email, role: UserRole }` shared by guards and decorators.
+- `apps/api/src/auth/decorators/public.decorator.ts` *(new)*: `@Public()` metadata decorator; sets `IS_PUBLIC_KEY` so `JwtAuthGuard` skips the route.
+- `apps/api/src/auth/decorators/roles.decorator.ts` *(new)*: `@Roles(...UserRole[])` metadata decorator; sets `ROLES_KEY` consumed by `RolesGuard`.
+- `apps/api/src/auth/decorators/current-user.decorator.ts` *(new)*: `@CurrentUser()` param decorator; extracts `request.user: JwtPayload` for use in controller methods.
+- `apps/api/src/auth/guards/jwt-auth.guard.ts` *(new)*: `JwtAuthGuard` — reads `access_token` HttpOnly cookie, skips if `@Public()`, validates JWT with `JWT_SECRET`, attaches payload to `request.user`; throws 401 if missing or expired.
+- `apps/api/src/auth/guards/roles.guard.ts` *(new)*: `RolesGuard` — reads `@Roles()` metadata; if present, checks `request.user.role` is in the allowed list; throws 403 otherwise.
+- `apps/api/src/auth/auth.module.ts`: Exports `JwtAuthGuard`, `RolesGuard`, and `JwtModule` so other modules can inject them.
+- `apps/api/src/app.module.ts`: Registers `JwtAuthGuard` and `RolesGuard` as global `APP_GUARD` providers, protecting all routes by default.
+- `apps/api/src/auth/auth.controller.ts`: Added `@Public()` at class level so all auth endpoints remain accessible without a token.
+- `apps/api/src/health/health.controller.ts`: Added `@Public()` at class level for the health-check endpoint.
+
+**Behaviour:**
+- Every route requires a valid `access_token` cookie unless decorated with `@Public()`.
+- `@Roles(UserRole.ADMIN)` on a controller/handler restricts access to ADMIN users; non-admin callers receive 403.
+- Event-level ORGANIZER/MEMBER authorization will be added per-handler in the events/expenses modules using the same `@CurrentUser()` + service-level checks pattern.
+
+---
+
 ## 2026-05-24 (37) — Phase 3: Auth module — POST /auth/reset-password
 
 **Files changed:**
