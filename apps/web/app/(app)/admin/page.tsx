@@ -5,6 +5,7 @@ import { Users, CalendarDays, Banknote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 type UserRole = 'ADMIN' | 'USER';
 type UserStatus = 'ACTIVE' | 'INACTIVE';
@@ -72,17 +73,6 @@ const MOCK_EVENTS: AdminEvent[] = [
   { id: 'e5', name: 'Team building Q1', organizerName: 'Đặng Văn Dũng', status: 'ACTIVE', memberCount: 20 },
 ];
 
-const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
-  ACTIVE: 'Đang diễn ra',
-  SETTLED: 'Đã huề',
-  ARCHIVED: 'Đã lưu trữ',
-};
-
-const EVENT_STATUS_VARIANTS: Record<EventStatus, 'success' | 'outline' | 'secondary'> = {
-  ACTIVE: 'success',
-  SETTLED: 'outline',
-  ARCHIVED: 'secondary',
-};
 
 function formatDate(iso: string) {
   const [y, m, d] = iso.split('-');
@@ -219,9 +209,7 @@ export default function AdminPage() {
                     <p className="text-xs text-muted-foreground">Ban tổ chức: {event.organizerName}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant={EVENT_STATUS_VARIANTS[event.status]}>
-                      {EVENT_STATUS_LABELS[event.status]}
-                    </Badge>
+                    <StatusBadge status={event.status} />
                   </td>
                   <td className="px-4 py-3 tabular-nums text-muted-foreground">
                     {event.memberCount} người

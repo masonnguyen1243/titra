@@ -244,7 +244,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Empty state component (reusable with custom icon + message)
 - [x] Avatar component (initials fallback if no photo)
 - [x] Currency display component (formats integers as "150.000 ₫")
-- [ ] Status badge component (ACTIVE / SETTLED / ARCHIVED / PENDING / CONFIRMED)
+- [x] Status badge component (ACTIVE / SETTLED / ARCHIVED / PENDING / CONFIRMED)
 
 ---
 

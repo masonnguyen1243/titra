@@ -11,6 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 type EventType = 'TRIP' | 'MEAL' | 'OTHER';
 type EventStatus = 'ACTIVE' | 'SETTLED' | 'ARCHIVED';
@@ -61,17 +62,6 @@ const TYPE_LABELS: Record<EventType, string> = {
   OTHER: 'Khác',
 };
 
-const STATUS_LABELS: Record<EventStatus, string> = {
-  ACTIVE: 'Đang diễn ra',
-  SETTLED: 'Đã huề',
-  ARCHIVED: 'Đã lưu trữ',
-};
-
-const STATUS_VARIANTS: Record<EventStatus, 'success' | 'warning' | 'secondary'> = {
-  ACTIVE: 'success',
-  SETTLED: 'warning',
-  ARCHIVED: 'secondary',
-};
 
 export default function DashboardPage() {
   return (
@@ -106,9 +96,7 @@ export default function DashboardPage() {
               <CardHeader className="gap-2">
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-base">{event.name}</CardTitle>
-                  <Badge variant={STATUS_VARIANTS[event.status]} className="shrink-0">
-                    {STATUS_LABELS[event.status]}
-                  </Badge>
+                  <StatusBadge status={event.status} className="shrink-0" />
                 </div>
                 {event.description && <CardDescription>{event.description}</CardDescription>}
               </CardHeader>

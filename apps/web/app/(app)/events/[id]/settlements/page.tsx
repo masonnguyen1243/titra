@@ -1,16 +1,15 @@
 'use client';
 
 import { use, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Handshake, Clock, CheckCircle2, Plus } from 'lucide-react';
+import { Handshake, Plus } from 'lucide-react';
+import { StatusBadge, type AppStatus } from '@/components/ui/status-badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import RecordSettlementDialog, {
   type Member,
   type NewSettlement,
 } from '@/components/features/record-settlement-dialog';
 
-type SettlementStatus = 'PENDING' | 'CONFIRMED';
 type PaymentMethod = 'MOMO' | 'VNPAY' | 'CASH' | 'OTHER';
 
 interface Settlement {
@@ -19,7 +18,7 @@ interface Settlement {
   to: string;
   amount: number;
   method: PaymentMethod;
-  status: SettlementStatus;
+  status: AppStatus;
   date: string;
   hasProof: boolean;
 }
@@ -112,22 +111,6 @@ function formatVND(amount: number): string {
   return amount.toLocaleString('vi-VN') + ' ₫';
 }
 
-function StatusBadge({ status }: { status: SettlementStatus }) {
-  if (status === 'CONFIRMED') {
-    return (
-      <Badge variant="success" className="gap-1 text-xs">
-        <CheckCircle2 className="h-3 w-3" />
-        Đã xác nhận
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="warning" className="gap-1 text-xs">
-      <Clock className="h-3 w-3" />
-      Chờ xác nhận
-    </Badge>
-  );
-}
 
 let nextId = 100;
 

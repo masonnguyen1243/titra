@@ -5,6 +5,18 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (30) — Phase 2: Shared components — Status badge component
+
+**Files created:**
+- `apps/web/components/ui/status-badge.tsx`: `StatusBadge` component. Accepts `status: AppStatus` (`'ACTIVE' | 'SETTLED' | 'ARCHIVED' | 'PENDING' | 'CONFIRMED' | 'INACTIVE'`) and optional `className`. Each status maps to a Vietnamese label, a Badge variant, and an optional Lucide icon: ACTIVE → "Đang diễn ra" (success); SETTLED → "Đã huề" (outline); ARCHIVED → "Đã lưu trữ" (secondary); PENDING → "Chờ xác nhận" (warning, Clock icon); CONFIRMED → "Đã xác nhận" (success, CheckCircle2 icon); INACTIVE → "Đã vô hiệu" (destructive).
+
+**Files changed:**
+- `apps/web/app/(app)/events/[id]/settlements/page.tsx`: removed inline `StatusBadge` function and unused `SettlementStatus` type; changed `Settlement.status` to `AppStatus`; replaced imports.
+- `apps/web/app/(app)/dashboard/page.tsx`: removed `STATUS_LABELS` and `STATUS_VARIANTS` maps; replaced inline `<Badge variant={STATUS_VARIANTS[…]}>…</Badge>` with `<StatusBadge status={event.status} />`.
+- `apps/web/app/(app)/admin/page.tsx`: removed `EVENT_STATUS_LABELS` and `EVENT_STATUS_VARIANTS` maps; replaced event status Badge with `<StatusBadge status={event.status} />`. User ACTIVE/INACTIVE kept as inline Badge (different label "Hoạt động" and `outline` variant vs event ACTIVE semantics).
+
+---
+
 ## 2026-05-24 (29) — Phase 2: Shared components — Currency display component
 
 **Files created:**
