@@ -5,6 +5,13 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (18) — Phase 2: Settlements tab
+
+**Files changed:**
+- `apps/web/app/(app)/events/[id]/settlements/page.tsx`: replaced stub with a full client component. Displays a list of settlements with PENDING / CONFIRMED status badges. Each row shows payer → recipient, status badge (yellow clock for PENDING, green checkmark for CONFIRMED), payment method (MoMo / VNPay / Tiền mặt / Khác), proof screenshot indicator, date, and amount. Summary line at the top shows total count and number confirmed. Empty state shows a Handshake icon with a message when there are no settlements. Static seed data for events `1` and `2`.
+
+---
+
 ## 2026-05-24 (17) — Phase 2: Balances tab
 
 **Files changed:**

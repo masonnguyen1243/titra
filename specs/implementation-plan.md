@@ -226,7 +226,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
   - [x] Custom split mode (amount input per member, running total shown)
   - [x] Receipt photo upload field
 - [x] Balances tab: net position per member + simplified "X owes Y: Z ₫" list
-- [ ] Settlements tab: list of settlements with status badges (PENDING / CONFIRMED)
+- [x] Settlements tab: list of settlements with status badges (PENDING / CONFIRMED)
 - [ ] Record Settlement form (select payer, amount, method, upload proof)
 - [ ] Chat tab: message list + text input
 - [ ] Members tab: member list with role badge + Remove button (organizer only)
