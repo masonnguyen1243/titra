@@ -13,8 +13,9 @@
     "baseUrl": "./",
     "incremental": true,
     "strictNullChecks": true,
-    "noImplicitAny": true
+    "noImplicitAny": true,
+    "types": ["jest", "node"]
   },
   "include": ["src/**/*", "prisma/seed.ts"],
-  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
+  "exclude": ["node_modules", "dist"]
 }

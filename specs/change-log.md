@@ -5,6 +5,29 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (32b) — Review fix: POST /auth/login
+
+**Issues found and fixed:**
+1. **Missing `emailVerified` check** — product spec requires "Unverified email accounts cannot access the app". Added guard in `login()` that throws 401 before issuing tokens if `emailVerified` is false.
+2. **Missing unit tests for login** — test plan requires `Login with correct credentials`, `Login with wrong password`, and by extension unverified/missing user cases. Added a `login` describe block in `auth.service.spec.ts` with 4 cases covering all paths.
+3. **IDE couldn't resolve jest globals in spec files** — `tsconfig.json` excluded `**/*.spec.ts`, so the language server never loaded `@types/jest`. Fixed by removing spec files from `tsconfig.json`'s exclude (build still uses `tsconfig.build.json` which keeps them excluded) and adding `"types": ["jest", "node"]`. Also added `tsconfig.spec.json` pointed at by the jest `transform` config.
+
+All 7 tests pass.
+
+---
+
+## 2026-05-24 (32) — Phase 3: Auth module — POST /auth/login
+
+**Files changed:**
+- `apps/api/src/auth/dto/login.dto.ts` *(new)*: `LoginDto` with `email` + `password` fields validated via `class-validator`.
+- `apps/api/src/auth/auth.service.ts`: Added `login()` — looks up user by email, bcrypt-compares password (constant-time; same error for wrong email and wrong password to prevent user enumeration), checks `isActive`, signs access token (15 min) and refresh token (7 days) with separate secrets, sets both as `HttpOnly; SameSite=Lax; Secure in prod` cookies, returns safe user fields.
+- `apps/api/src/auth/auth.controller.ts`: Added `POST /auth/login` using `@Res({ passthrough: true })` to let NestJS still handle serialisation while the service writes cookies directly.
+- `apps/api/src/auth/auth.module.ts`: Imported `JwtModule.register({})` (secrets passed per-call so no global secret needed).
+- `apps/api/src/main.ts`: Registered `cookie-parser` middleware.
+- `apps/api/package.json`: Added `@nestjs/jwt`, `cookie-parser`, `@types/cookie-parser`.
+
+---
+
 ## 2026-05-24 (31b) — Review fix: POST /auth/register
 
 **Issues found and fixed:**

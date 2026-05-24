@@ -2,14 +2,21 @@ import {
   ConflictException,
   Injectable,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
+import { Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
+import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
 const BCRYPT_ROUNDS = 12;
 const VERIFICATION_TOKEN_TTL_HOURS = 24;
+const ACCESS_TOKEN_TTL = '15m';
+const REFRESH_TOKEN_TTL = '7d';
+const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function escapeHtml(str: string): string {
   return str
@@ -24,7 +31,78 @@ function escapeHtml(str: string): string {
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  async login(dto: LoginDto, res: Response) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        emailVerified: true,
+        isActive: true,
+        passwordHash: true,
+      },
+    });
+
+    const isValid =
+      user?.passwordHash != null &&
+      (await bcrypt.compare(dto.password, user.passwordHash));
+
+    if (!user || !isValid) {
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+    }
+
+    if (!user.emailVerified) {
+      throw new UnauthorizedException('Vui lòng xác nhận email trước khi đăng nhập');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Tài khoản đã bị vô hiệu hoá');
+    }
+
+    const payload = { sub: user.id, email: user.email, role: user.role };
+
+    const accessToken = this.jwtService.sign(payload, {
+      secret: process.env['JWT_SECRET'],
+      expiresIn: ACCESS_TOKEN_TTL,
+    });
+
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: process.env['JWT_REFRESH_SECRET'],
+      expiresIn: REFRESH_TOKEN_TTL,
+    });
+
+    const cookieBase = {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      secure: process.env['NODE_ENV'] === 'production',
+      path: '/',
+    };
+
+    res.cookie('access_token', accessToken, {
+      ...cookieBase,
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie('refresh_token', refreshToken, {
+      ...cookieBase,
+      maxAge: REFRESH_TOKEN_TTL_MS,
+    });
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      emailVerified: user.emailVerified,
+    };
+  }
 
   async register(dto: RegisterDto) {
     const existing = await this.prisma.user.findUnique({
