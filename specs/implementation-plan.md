@@ -151,39 +151,39 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 **Goal:** Empty repo → fully runnable skeleton with linting, types, and DB connected.
 
 **Monorepo & tooling**
-- [ ] Init pnpm workspace + Turborepo
-- [ ] Configure `turbo.json` with `dev`, `build`, `lint`, `typecheck` pipelines
-- [ ] Add root `package.json` scripts that delegate to Turborepo
-- [ ] Set up ESLint + Prettier with shared config across all packages
-- [ ] Enable TypeScript strict mode in all `tsconfig.json` files
+- [x] Init pnpm workspace + Turborepo
+- [x] Configure `turbo.json` with `dev`, `build`, `lint`, `typecheck` pipelines
+- [x] Add root `package.json` scripts that delegate to Turborepo
+- [x] Set up ESLint + Prettier with shared config across all packages
+- [x] Enable TypeScript strict mode in all `tsconfig.json` files
 
 **Frontend skeleton**
-- [ ] Scaffold `apps/web` with Next.js 15 (App Router)
-- [ ] Install and configure TailwindCSS
-- [ ] Install shadcn/ui, add base components: Button, Input, Card, Dialog, Tabs, Toast
-- [ ] Create app shell layout with sidebar and header placeholder
-- [ ] Add route groups: `(auth)` and `(app)`
+- [x] Scaffold `apps/web` with Next.js 15 (App Router)
+- [x] Install and configure TailwindCSS
+- [x] Install shadcn/ui, add base components: Button, Input, Card, Dialog, Tabs, Toast
+- [x] Create app shell layout with sidebar and header placeholder
+- [x] Add route groups: `(auth)` and `(app)`
 
 **Backend skeleton**
-- [ ] Scaffold `apps/api` with NestJS
-- [ ] Configure global prefix `/api/v1`
-- [ ] Add `helmet`, `compression`, and CORS middleware
-- [ ] Add `nestjs-throttler` for rate limiting
-- [ ] Add health-check endpoint `GET /api/v1/health`
+- [x] Scaffold `apps/api` with NestJS
+- [x] Configure global prefix `/api/v1`
+- [x] Add `helmet`, `compression`, and CORS middleware
+- [x] Add `nestjs-throttler` for rate limiting
+- [x] Add health-check endpoint `GET /api/v1/health`
 
 **Database**
-- [ ] Add Prisma to `apps/api`, connect to PostgreSQL (Neon)
-- [ ] Write full initial schema: User, Event, EventMember, Expense, ExpenseSplit, Settlement, Message
-- [ ] Run first migration, confirm connection works
+- [x] Add Prisma to `apps/api`, connect to PostgreSQL (Neon)
+- [x] Write full initial schema: User, Event, EventMember, Expense, ExpenseSplit, Settlement, Message
+- [ ] Run first migration, confirm connection works ← requires DATABASE_URL
 
 **Shared package**
-- [ ] Scaffold `packages/shared` with Zod
-- [ ] Add base Zod schemas matching the DB schema (used later for validation)
+- [x] Scaffold `packages/shared` with Zod
+- [x] Add base Zod schemas matching the DB schema (used later for validation)
 
 **Config & CI**
-- [ ] Create `.env.example` with all required variables
-- [ ] Add `.env` to `.gitignore`
-- [ ] Add GitHub Actions workflow: lint + typecheck + unit tests on every push
+- [x] Create `.env.example` with all required variables
+- [x] Add `.env` to `.gitignore`
+- [x] Add GitHub Actions workflow: lint + typecheck + unit tests on every push
 
 ---
 

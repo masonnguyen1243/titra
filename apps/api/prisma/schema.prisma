@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum EventType {
+  TRIP
+  MEAL
+  OTHER
+}
+
+enum EventStatus {
+  ACTIVE
+  SETTLED
+  ARCHIVED
+}
+
+enum MemberRole {
+  ORGANIZER
+  MEMBER
+}
+
+enum SplitType {
+  EQUAL
+  CUSTOM
+}
+
+enum ExpenseCategory {
+  FOOD
+  TRANSPORT
+  ACCOMMODATION
+  ACTIVITY
+  OTHER
+}
+
+enum SettlementMethod {
+  MOMO
+  VNPAY
+  CASH
+  OTHER
+}
+
+enum SettlementStatus {
+  PENDING
+  CONFIRMED
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String?
+  name          String
+  avatarUrl     String?
+  role          UserRole @default(USER)
+  emailVerified Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  eventMembers EventMember[]
+
+  @@map("users")
+}
+
+model Event {
+  id            String      @id @default(uuid())
+  name          String
+  description   String?
+  type          EventType   @default(TRIP)
+  status        EventStatus @default(ACTIVE)
+  currency      String      @default("VND")
+  coverImageUrl String?
+  inviteToken   String      @unique @default(uuid())
+  organizerId   String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+
+  members     EventMember[]
+  expenses    Expense[]
+  settlements Settlement[]
+  messages    Message[]
+
+  @@map("events")
+}
+
+model EventMember {
+  id       String     @id @default(uuid())
+  eventId  String
+  userId   String?
+  nickname String
+  role     MemberRole @default(MEMBER)
+  joinedAt DateTime   @default(now())
+
+  event               Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user                User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  paidExpenses        Expense[]      @relation("ExpensePaidBy")
+  expenseSplits       ExpenseSplit[]
+  sentSettlements     Settlement[]   @relation("SettlementFrom")
+  receivedSettlements Settlement[]   @relation("SettlementTo")
+  messages            Message[]
+
+  @@unique([eventId, userId])
+  @@map("event_members")
+}
+
+model Expense {
+  id          String          @id @default(uuid())
+  eventId     String
+  paidById    String
+  amount      Int
+  description String
+  category    ExpenseCategory @default(OTHER)
+  receiptUrl  String?
+  splitType   SplitType       @default(EQUAL)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  deletedAt   DateTime?
+
+  event  Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  paidBy EventMember @relation("ExpensePaidBy", fields: [paidById], references: [id])
+  splits ExpenseSplit[]
+
+  @@map("expenses")
+}
+
+model ExpenseSplit {
+  id        String @id @default(uuid())
+  expenseId String
+  memberId  String
+  amount    Int
+
+  expense Expense     @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  member  EventMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId, memberId])
+  @@map("expense_splits")
+}
+
+model Settlement {
+  id           String           @id @default(uuid())
+  eventId      String
+  fromMemberId String
+  toMemberId   String
+  amount       Int
+  method       SettlementMethod @default(CASH)
+  proofUrl     String?
+  status       SettlementStatus @default(PENDING)
+  confirmedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  event      Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  fromMember EventMember @relation("SettlementFrom", fields: [fromMemberId], references: [id])
+  toMember   EventMember @relation("SettlementTo", fields: [toMemberId], references: [id])
+
+  @@map("settlements")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  eventId   String
+  memberId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  event  Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member EventMember @relation(fields: [memberId], references: [id])
+
+  @@map("messages")
+}
