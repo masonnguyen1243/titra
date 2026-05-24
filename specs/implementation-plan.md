@@ -219,7 +219,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Event detail**
 
-- [ ] Event shell with tab navigation: Expenses · Balances · Settlements · Chat · Members
+- [x] Event shell with tab navigation: Expenses · Balances · Settlements · Chat · Members
 - [ ] Expenses tab: list of expenses with payer, amount, description, category chip
 - [ ] Add Expense form:
   - [ ] Equal split mode (member checkboxes, per-person amount shown live)

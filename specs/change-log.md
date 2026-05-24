@@ -5,6 +5,27 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (14) — Review fix: Event shell with tab navigation
+
+**Issues found and fixed in `apps/web/app/(app)/events/[id]/layout.tsx`:**
+1. **WCAG 2.1 AA — missing `aria-label` on `nav`** — the page contains two `nav` elements (app header nav + tab nav); without a label, screen readers announce both as "navigation" with no way to distinguish them. Fixed: added `aria-label="Tab điều hướng sự kiện"` to the tab nav.
+2. **WCAG 2.1 AA — missing `aria-current` on active tab** — SC 4.1.2 requires that the current state of a navigation item be conveyed to assistive technology. Fixed: added `aria-current="page"` to the active tab link, `undefined` (omitted) on inactive ones.
+
+---
+
+## 2026-05-24 (13) — Phase 2: Event shell with tab navigation
+
+**Files created:**
+- `apps/web/app/(app)/events/[id]/layout.tsx`: client component — event header (name, description, member count, type + status badges) with a back link to the dashboard; link-based tab nav for Chi phí · Số dư · Thanh toán · Trò chuyện · Thành viên; active tab highlighted via `usePathname()`. Uses mock event data keyed by `[id]` (replaced by API in Phase 4).
+- `apps/web/app/(app)/events/[id]/page.tsx`: redirects to `/events/[id]/expenses`.
+- `apps/web/app/(app)/events/[id]/expenses/page.tsx`: stub placeholder.
+- `apps/web/app/(app)/events/[id]/balances/page.tsx`: stub placeholder.
+- `apps/web/app/(app)/events/[id]/settlements/page.tsx`: stub placeholder.
+- `apps/web/app/(app)/events/[id]/chat/page.tsx`: stub placeholder.
+- `apps/web/app/(app)/events/[id]/members/page.tsx`: stub placeholder.
+
+---
+
 ## 2026-05-24 (12) — Review fix: Create event form
 
 **Issues found and fixed in `apps/web/app/(app)/events/new/page.tsx`:**
