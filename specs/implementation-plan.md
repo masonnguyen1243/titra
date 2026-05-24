@@ -228,7 +228,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Balances tab: net position per member + simplified "X owes Y: Z ₫" list
 - [x] Settlements tab: list of settlements with status badges (PENDING / CONFIRMED)
 - [x] Record Settlement form (select payer, amount, method, upload proof)
-- [ ] Chat tab: message list + text input
+- [x] Chat tab: message list + text input
 - [ ] Members tab: member list with role badge + Remove button (organizer only)
 - [ ] Invite link display with Copy button
 

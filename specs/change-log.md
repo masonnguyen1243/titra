@@ -5,6 +5,13 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (20) — Phase 2: Chat tab
+
+**Files changed:**
+- `apps/web/app/(app)/events/[id]/chat/page.tsx`: replaced stub with a full stateful client component. Layout: a bordered container occupying remaining viewport height (`calc(100vh - 22rem)`), split into a scrollable message area (flex-1) and a pinned input bar at the bottom. **Message list**: messages ordered chronologically with date-separator dividers between days. Others' messages appear on the left with an avatar initial bubble (hidden when consecutive messages from the same sender); the simulated current user's messages appear right-aligned in a dark bubble. Consecutive messages from the same sender share the avatar slot (hidden but space preserved for alignment). **Auto-scroll**: jumps to the bottom instantly on mount; smooth-scrolls on each new message. **Send**: Enter key or Send icon button appends the message with the current timestamp; button disabled when input is empty. **Empty state**: centered MessageCircle icon with Vietnamese prompt. Seed data for events `1` (7 messages across 2 days) and `2` (4 messages).
+
+---
+
 ## 2026-05-24 (19) — Phase 2: Record Settlement form
 
 **Files created:**
