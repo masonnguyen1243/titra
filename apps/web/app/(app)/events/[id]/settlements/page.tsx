@@ -4,6 +4,7 @@ import { use, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Handshake, Clock, CheckCircle2, Plus } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import RecordSettlementDialog, {
   type Member,
   type NewSettlement,
@@ -157,19 +158,16 @@ export default function SettlementsPage({ params }: { params: Promise<{ id: stri
   return (
     <>
       {settlements.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-          <Handshake className="h-10 w-10 text-muted-foreground/40" />
-          <div className="space-y-1">
-            <p className="font-medium text-sm">Chưa có giao dịch nào</p>
-            <p className="text-muted-foreground text-sm">
-              Các khoản thanh toán giữa thành viên sẽ hiển thị ở đây.
-            </p>
-          </div>
-          <Button size="sm" className="mt-1" onClick={() => setDialogOpen(true)}>
+        <EmptyState
+          icon={Handshake}
+          title="Chưa có giao dịch nào"
+          description="Các khoản thanh toán giữa thành viên sẽ hiển thị ở đây."
+        >
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-1.5" />
             Ghi nhận thanh toán
           </Button>
-        </div>
+        </EmptyState>
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between">

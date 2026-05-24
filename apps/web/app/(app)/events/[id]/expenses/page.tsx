@@ -4,6 +4,7 @@ import { use, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Receipt } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import AddExpenseDialog, {
   type Member,
   type NewExpense,
@@ -158,19 +159,16 @@ export default function ExpensesPage({ params }: { params: Promise<{ id: string 
   return (
     <>
       {expenses.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-          <Receipt className="h-10 w-10 text-muted-foreground/40" />
-          <div className="space-y-1">
-            <p className="font-medium text-sm">Chưa có chi phí nào</p>
-            <p className="text-muted-foreground text-sm">
-              Hãy thêm chi phí đầu tiên cho sự kiện này.
-            </p>
-          </div>
-          <Button size="sm" className="mt-1" onClick={() => setDialogOpen(true)}>
+        <EmptyState
+          icon={Receipt}
+          title="Chưa có chi phí nào"
+          description="Hãy thêm chi phí đầu tiên cho sự kiện này."
+        >
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-1.5" />
             Thêm chi phí
           </Button>
-        </div>
+        </EmptyState>
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -188,10 +186,7 @@ export default function ExpensesPage({ params }: { params: Promise<{ id: string 
 
           <div className="divide-y rounded-lg border">
             {expenses.map((expense) => (
-              <div
-                key={expense.id}
-                className="flex items-center justify-between gap-4 px-4 py-3.5"
-              >
+              <div key={expense.id} className="flex items-center justify-between gap-4 px-4 py-3.5">
                 <div className="min-w-0 space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-sm truncate">{expense.description}</span>

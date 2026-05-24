@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MessageCircle, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface Message {
   id: string;
@@ -21,19 +22,74 @@ const CURRENT_USER: Record<string, string> = {
 
 const SEED_MESSAGES: Record<string, Message[]> = {
   '1': [
-    { id: 'msg1', sender: 'Hùng', text: 'Mọi người ơi, đặt khách sạn chưa?', timestamp: '2025-03-14T08:12:00' },
-    { id: 'msg2', sender: 'Minh Anh', text: 'Đặt rồi nha, Ana Mandara 2 đêm 😊', timestamp: '2025-03-14T08:15:00' },
-    { id: 'msg3', sender: 'Linh', text: 'Oke bạn ơi, mình đặt xe máy nhé?', timestamp: '2025-03-14T08:20:00' },
-    { id: 'msg4', sender: 'Minh Anh', text: 'Thuê luôn đi, tiện hơn taxi nhiều', timestamp: '2025-03-14T08:22:00' },
-    { id: 'msg5', sender: 'Tuấn', text: 'Sáng thứ 6 mọi người khởi hành lúc mấy giờ?', timestamp: '2025-03-15T07:00:00' },
-    { id: 'msg6', sender: 'Hùng', text: 'Mình đề xuất 6h sáng nha, để kịp ăn sáng Đà Lạt', timestamp: '2025-03-15T07:05:00' },
-    { id: 'msg7', sender: 'Minh Anh', text: 'Ổn, 6h mình có mặt 👌', timestamp: '2025-03-15T07:08:00' },
+    {
+      id: 'msg1',
+      sender: 'Hùng',
+      text: 'Mọi người ơi, đặt khách sạn chưa?',
+      timestamp: '2025-03-14T08:12:00',
+    },
+    {
+      id: 'msg2',
+      sender: 'Minh Anh',
+      text: 'Đặt rồi nha, Ana Mandara 2 đêm 😊',
+      timestamp: '2025-03-14T08:15:00',
+    },
+    {
+      id: 'msg3',
+      sender: 'Linh',
+      text: 'Oke bạn ơi, mình đặt xe máy nhé?',
+      timestamp: '2025-03-14T08:20:00',
+    },
+    {
+      id: 'msg4',
+      sender: 'Minh Anh',
+      text: 'Thuê luôn đi, tiện hơn taxi nhiều',
+      timestamp: '2025-03-14T08:22:00',
+    },
+    {
+      id: 'msg5',
+      sender: 'Tuấn',
+      text: 'Sáng thứ 6 mọi người khởi hành lúc mấy giờ?',
+      timestamp: '2025-03-15T07:00:00',
+    },
+    {
+      id: 'msg6',
+      sender: 'Hùng',
+      text: 'Mình đề xuất 6h sáng nha, để kịp ăn sáng Đà Lạt',
+      timestamp: '2025-03-15T07:05:00',
+    },
+    {
+      id: 'msg7',
+      sender: 'Minh Anh',
+      text: 'Ổn, 6h mình có mặt 👌',
+      timestamp: '2025-03-15T07:08:00',
+    },
   ],
   '2': [
-    { id: 'msg8', sender: 'Lan', text: 'Đặt bàn nhà hàng Hoa Sen lúc 7h tối nha mọi người', timestamp: '2025-01-19T14:00:00' },
-    { id: 'msg9', sender: 'Dũng', text: 'Được bạn ơi, mình sẽ đến đúng giờ', timestamp: '2025-01-19T14:10:00' },
-    { id: 'msg10', sender: 'Nam', text: 'Mình mang theo vợ được không?', timestamp: '2025-01-19T14:15:00' },
-    { id: 'msg11', sender: 'Lan', text: 'Dĩ nhiên rồi, nhớ báo thêm người để đặt bàn lớn hơn nha', timestamp: '2025-01-19T14:18:00' },
+    {
+      id: 'msg8',
+      sender: 'Lan',
+      text: 'Đặt bàn nhà hàng Hoa Sen lúc 7h tối nha mọi người',
+      timestamp: '2025-01-19T14:00:00',
+    },
+    {
+      id: 'msg9',
+      sender: 'Dũng',
+      text: 'Được bạn ơi, mình sẽ đến đúng giờ',
+      timestamp: '2025-01-19T14:10:00',
+    },
+    {
+      id: 'msg10',
+      sender: 'Nam',
+      text: 'Mình mang theo vợ được không?',
+      timestamp: '2025-01-19T14:15:00',
+    },
+    {
+      id: 'msg11',
+      sender: 'Lan',
+      text: 'Dĩ nhiên rồi, nhớ báo thêm người để đặt bàn lớn hơn nha',
+      timestamp: '2025-01-19T14:18:00',
+    },
   ],
 };
 
@@ -93,17 +149,19 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
   }
 
   return (
-    <div className="flex flex-col gap-0 rounded-lg border overflow-hidden" style={{ height: 'calc(100vh - 22rem)' }}>
+    <div
+      className="flex flex-col gap-0 rounded-lg border overflow-hidden"
+      style={{ height: 'calc(100vh - 22rem)' }}
+    >
       {/* Message list */}
       <div className="flex-1 overflow-y-auto p-4 space-y-1">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
-            <MessageCircle className="h-10 w-10 text-muted-foreground/40" />
-            <div className="space-y-1">
-              <p className="font-medium text-sm">Chưa có tin nhắn nào</p>
-              <p className="text-muted-foreground text-sm">Hãy là người đầu tiên nhắn gì đó!</p>
-            </div>
-          </div>
+          <EmptyState
+            icon={MessageCircle}
+            title="Chưa có tin nhắn nào"
+            description="Hãy là người đầu tiên nhắn gì đó!"
+            className="h-full py-0"
+          />
         ) : (
           messages.map((msg, i) => {
             const isMe = msg.sender === currentUser;

@@ -5,6 +5,19 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (27) — Phase 2: Shared components — Empty state component
+
+**Files created:**
+- `apps/web/components/ui/empty-state.tsx`: reusable `EmptyState` component. Props: `icon` (Lucide `React.ElementType`), `title` (required string), `description` (optional string), `bordered` (boolean — adds `rounded-xl border border-dashed` wrapper, used on dashboard), `className` (escape hatch for padding/height overrides), `children` (action slot for CTA buttons).
+
+**Files changed:**
+- `apps/web/app/(app)/dashboard/page.tsx`: replaced inline dashed-border empty state with `<EmptyState icon={MapPin} bordered …>`.
+- `apps/web/app/(app)/events/[id]/expenses/page.tsx`: replaced inline empty state with `<EmptyState icon={Receipt} …>`.
+- `apps/web/app/(app)/events/[id]/settlements/page.tsx`: replaced inline empty state with `<EmptyState icon={Handshake} …>`.
+- `apps/web/app/(app)/events/[id]/chat/page.tsx`: replaced inline empty state with `<EmptyState icon={MessageCircle} className="h-full py-0" />`.
+
+---
+
 ## 2026-05-24 (26) — Phase 2: Shared components — Loading skeleton
 
 **Files created:**

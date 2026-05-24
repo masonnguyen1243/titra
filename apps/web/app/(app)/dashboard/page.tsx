@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 
 type EventType = 'TRIP' | 'MEAL' | 'OTHER';
 type EventStatus = 'ACTIVE' | 'SETTLED' | 'ARCHIVED';
@@ -88,16 +89,16 @@ export default function DashboardPage() {
       </div>
 
       {MOCK_EVENTS.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-20 text-center">
-          <MapPin className="h-12 w-12 text-muted-foreground/40 mb-4" />
-          <h2 className="text-lg font-semibold">Bạn chưa có chuyến đi nào</h2>
-          <p className="text-muted-foreground text-sm mt-1 mb-6">
-            Tạo chuyến đi đầu tiên và mời bạn bè cùng theo dõi chi tiêu.
-          </p>
+        <EmptyState
+          icon={MapPin}
+          title="Bạn chưa có chuyến đi nào"
+          description="Tạo chuyến đi đầu tiên và mời bạn bè cùng theo dõi chi tiêu."
+          bordered
+        >
           <Button asChild>
             <Link href="/events/new">Tạo chuyến đi đầu tiên</Link>
           </Button>
-        </div>
+        </EmptyState>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {MOCK_EVENTS.map((event) => (
