@@ -21,7 +21,7 @@ Guidelines for AI agents (Claude Code and others) working on this codebase.
 ## Stack Conventions
 
 ### Frontend (apps/web)
-- Next.js 14 App Router only — no Pages Router.
+- Next.js 15 App Router only — no Pages Router.
 - Use `shadcn/ui` components as the base; do not install competing UI libraries.
 - TailwindCSS for styling. Avoid inline `style={}` props unless truly unavoidable.
 - Server Components by default; add `"use client"` only when interactivity requires it.

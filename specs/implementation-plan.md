@@ -26,7 +26,7 @@ Managed hosting recommendation: **Neon** (serverless Postgres, generous free tie
 ```
 ┌─────────────────────────────────────────────────┐
 │                   Browser / PWA                 │
-│         Next.js 14 (App Router) + shadcn/ui     │
+│         Next.js 15 (App Router) + shadcn/ui     │
 └──────────────────┬──────────────────────────────┘
                    │ HTTPS / WebSocket
 ┌──────────────────▼──────────────────────────────┐
@@ -52,7 +52,7 @@ Managed hosting recommendation: **Neon** (serverless Postgres, generous free tie
 ```
 titra/
 ├── apps/
-│   ├── web/                    # Next.js 14 frontend
+│   ├── web/                    # Next.js 15 frontend
 │   │   ├── app/                # App Router pages
 │   │   │   ├── (auth)/         # Login, register, forgot-password
 │   │   │   ├── (app)/          # Authenticated app shell
@@ -102,7 +102,7 @@ titra/
 **Goal:** Runnable skeleton, CI, and database connected.
 
 - [ ] Init pnpm monorepo + Turborepo
-- [ ] Scaffold Next.js 14 app with TailwindCSS + shadcn/ui
+- [ ] Scaffold Next.js 15 app with TailwindCSS + shadcn/ui
 - [ ] Scaffold NestJS app
 - [ ] Set up Prisma with PostgreSQL, write initial schema
 - [ ] Set up ESLint + Prettier + TypeScript strict across all packages

@@ -26,7 +26,7 @@ Titra is a lightweight expense-splitting web app for friend groups. Create a tri
 
 | Layer      | Technology                          |
 |------------|--------------------------------------|
-| Frontend   | Next.js 14, TypeScript, TailwindCSS, shadcn/ui |
+| Frontend   | Next.js 15, TypeScript, TailwindCSS, shadcn/ui |
 | Backend    | NestJS, TypeScript                  |
 | Database   | PostgreSQL + Prisma ORM             |
 | Auth       | NextAuth.js / JWT                   |
