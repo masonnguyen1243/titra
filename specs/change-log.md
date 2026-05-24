@@ -5,6 +5,27 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (11) — Phase 2: Create event form
+
+**Files changed:**
+- `apps/web/app/(app)/events/new/page.tsx`: new client component — form with controlled state for name (text input, required), event type (3-option button toggle: Chuyến đi / Bữa ăn / Khác), description (textarea, optional), and cover photo (file input with live image preview + remove button). Submit button disabled until name is non-empty. Cancel link returns to `/dashboard`. No API call yet (wired in Phase 4).
+
+---
+
+## 2026-05-24 (10) — Phase 2: Dashboard empty state
+
+**Files changed:**
+- `apps/web/app/(app)/dashboard/page.tsx`: added empty state branch — when `MOCK_EVENTS` is empty, renders a dashed-border panel with a MapPin icon, heading "Bạn chưa có chuyến đi nào", a short description, and a "Tạo chuyến đi đầu tiên" CTA button. The existing event grid renders when events are present.
+
+---
+
+## 2026-05-24 (9) — Phase 2: Event list page (dashboard)
+
+**Files changed:**
+- `apps/web/app/(app)/dashboard/page.tsx`: replaced placeholder with a grid of event cards. Each card shows event name, description, type badge (Chuyến đi / Bữa ăn / Khác), status badge (Đang diễn ra / Đã huề / Đã lưu trữ), member count, and date. "Tạo chuyến đi" button in the header. "Xem chi tiết" link per card. Static/hardcoded data (3 mock events). No API calls yet.
+
+---
+
 ## 2026-05-24 (8) — Phase 2: Email sent confirmation screen
 
 **Files changed:**

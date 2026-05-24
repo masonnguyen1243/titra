@@ -213,9 +213,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Dashboard**
 
-- [ ] Event list page (cards showing event name, type, member count, status)
-- [ ] Empty state: "Bạn chưa có chuyến đi nào" with Create button
-- [ ] Create event form (name, type, description, cover photo upload)
+- [x] Event list page (cards showing event name, type, member count, status)
+- [x] Empty state: "Bạn chưa có chuyến đi nào" with Create button
+- [x] Create event form (name, type, description, cover photo upload)
 
 **Event detail**
 
