@@ -5,6 +5,20 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (36) — Phase 3: Auth module — POST /auth/forgot-password
+
+**Files changed:**
+- `apps/api/prisma/schema.prisma`: Added `passwordResetToken String? @unique` and `passwordResetExpiry DateTime?` fields to `User` model.
+- `apps/api/prisma/migrations/20260524_add_password_reset_to_user/migration.sql` *(new)*: `ALTER TABLE "users"` adds `passwordResetToken` (unique, nullable) and `passwordResetExpiry` (nullable) columns.
+- `apps/api/src/auth/dto/forgot-password.dto.ts` *(new)*: `ForgotPasswordDto` with a single `email` field validated with `@IsEmail @IsNotEmpty`.
+- `apps/api/src/auth/auth.service.ts`: Added `forgotPassword()` — looks up user by email; always returns `{ ok: true }` (prevents user enumeration); skips DB write when user is not found or inactive; otherwise generates a UUID reset token with 1-hour TTL, persists it via `prisma.user.update`, and calls `sendPasswordResetEmail()`. Added private `sendPasswordResetEmail()` — logs reset URL in dev (no `RESEND_API_KEY`); sends a Vietnamese-language reset email via Resend in production with HTML-escaped name. Added `RESET_TOKEN_TTL_HOURS = 1` constant.
+- `apps/api/src/auth/auth.controller.ts`: Added `POST /auth/forgot-password` route using `@Body() ForgotPasswordDto`, returns 200.
+- `apps/api/src/auth/auth.service.spec.ts`: Added `forgotPassword` describe block with 3 cases: known active user → token persisted with ~1h expiry; unknown email → `{ ok: true }` without DB write; inactive user → `{ ok: true }` without DB write.
+
+All 20 auth service tests pass. Ran `npx prisma generate` to update the client.
+
+---
+
 ## 2026-05-24 (35b) — Review fix: POST /auth/verify-email
 
 **Issue found and fixed:**

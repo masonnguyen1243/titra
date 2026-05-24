@@ -68,6 +68,8 @@ model User {
   isActive                Boolean   @default(true)
   verificationToken       String?   @unique
   verificationTokenExpiry DateTime?
+  passwordResetToken      String?   @unique
+  passwordResetExpiry     DateTime?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 

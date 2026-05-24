@@ -10,11 +10,13 @@ import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import { Request, Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
 const BCRYPT_ROUNDS = 12;
 const VERIFICATION_TOKEN_TTL_HOURS = 24;
+const RESET_TOKEN_TTL_HOURS = 1;
 const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TOKEN_TTL = '7d';
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -161,6 +163,32 @@ export class AuthService {
     return { ok: true };
   }
 
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      select: { id: true, name: true, email: true, isActive: true },
+    });
+
+    // Always return ok to prevent user enumeration
+    if (!user || !user.isActive) {
+      return { ok: true };
+    }
+
+    const resetToken = randomUUID();
+    const resetExpiry = new Date(
+      Date.now() + RESET_TOKEN_TTL_HOURS * 60 * 60 * 1000,
+    );
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordResetToken: resetToken, passwordResetExpiry: resetExpiry },
+    });
+
+    await this.sendPasswordResetEmail(user.email, user.name, resetToken);
+
+    return { ok: true };
+  }
+
   logout(res: Response) {
     const cookieBase = {
       httpOnly: true,
@@ -220,6 +248,40 @@ export class AuthService {
     await this.sendVerificationEmail(dto.email, dto.name, verificationToken);
 
     return user;
+  }
+
+  private async sendPasswordResetEmail(
+    email: string,
+    name: string,
+    token: string,
+  ) {
+    const appUrl =
+      process.env['NEXT_PUBLIC_APP_URL'] ?? 'http://localhost:3000';
+    const resetUrl = `${appUrl}/reset-password?token=${token}`;
+
+    const resendApiKey = process.env['RESEND_API_KEY'];
+    if (!resendApiKey) {
+      this.logger.log(`[DEV] Password reset link for ${email}: ${resetUrl}`);
+      return;
+    }
+
+    try {
+      const { Resend } = await import('resend');
+      const resend = new Resend(resendApiKey);
+      await resend.emails.send({
+        from: process.env['EMAIL_FROM'] ?? 'onboarding@resend.dev',
+        to: email,
+        subject: 'Đặt lại mật khẩu — Titra',
+        html: `
+          <p>Xin chào ${escapeHtml(name)},</p>
+          <p>Nhấn vào liên kết dưới đây để đặt lại mật khẩu. Liên kết có hiệu lực trong 1 giờ.</p>
+          <p><a href="${resetUrl}">${resetUrl}</a></p>
+          <p>Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này.</p>
+        `,
+      });
+    } catch (err) {
+      this.logger.error(`Failed to send password reset email to ${email}`, err);
+    }
   }
 
   private async sendVerificationEmail(

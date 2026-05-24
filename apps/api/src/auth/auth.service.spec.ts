@@ -270,6 +270,56 @@ describe('AuthService', () => {
     });
   });
 
+  describe('forgotPassword', () => {
+    const activeUser = {
+      id: 'uuid-1',
+      name: 'Nguyen Van A',
+      email: 'test@example.com',
+      isActive: true,
+    };
+
+    it('generates a reset token, persists it, and returns { ok: true } for a known active user', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(activeUser);
+      mockPrisma.user.update.mockResolvedValue({});
+
+      const result = await service.forgotPassword({ email: activeUser.email });
+
+      expect(result).toEqual({ ok: true });
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: activeUser.id },
+          data: expect.objectContaining({
+            passwordResetToken: expect.any(String),
+            passwordResetExpiry: expect.any(Date),
+          }),
+        }),
+      );
+
+      const updateCall = mockPrisma.user.update.mock.calls[0][0];
+      const expiry: Date = updateCall.data.passwordResetExpiry;
+      // expiry should be ~1 hour from now
+      expect(expiry.getTime()).toBeGreaterThan(Date.now() + 59 * 60 * 1000);
+    });
+
+    it('returns { ok: true } without touching DB when email is not found (prevents enumeration)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      const result = await service.forgotPassword({ email: 'nobody@example.com' });
+
+      expect(result).toEqual({ ok: true });
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('returns { ok: true } without touching DB when user is inactive (prevents enumeration)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ ...activeUser, isActive: false });
+
+      const result = await service.forgotPassword({ email: activeUser.email });
+
+      expect(result).toEqual({ ok: true });
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('refresh', () => {
     const REFRESH_SECRET = 'test-refresh-secret';
     const ACCESS_SECRET = 'test-access-secret';
