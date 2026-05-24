@@ -7,7 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -78,22 +78,7 @@ export class AuthService {
       expiresIn: REFRESH_TOKEN_TTL,
     });
 
-    const cookieBase = {
-      httpOnly: true,
-      sameSite: 'lax' as const,
-      secure: process.env['NODE_ENV'] === 'production',
-      path: '/',
-    };
-
-    res.cookie('access_token', accessToken, {
-      ...cookieBase,
-      maxAge: 15 * 60 * 1000,
-    });
-
-    res.cookie('refresh_token', refreshToken, {
-      ...cookieBase,
-      maxAge: REFRESH_TOKEN_TTL_MS,
-    });
+    this.setTokenCookies(res, accessToken, refreshToken);
 
     return {
       id: user.id,
@@ -102,6 +87,59 @@ export class AuthService {
       role: user.role,
       emailVerified: user.emailVerified,
     };
+  }
+
+  async refresh(req: Request, res: Response) {
+    const token: string | undefined = (req.cookies as Record<string, string>)['refresh_token'];
+    if (!token) {
+      throw new UnauthorizedException('Refresh token không hợp lệ');
+    }
+
+    let payload: { sub: string; email: string; role: string };
+    try {
+      payload = this.jwtService.verify(token, {
+        secret: process.env['JWT_REFRESH_SECRET'],
+      }) as typeof payload;
+    } catch {
+      throw new UnauthorizedException('Refresh token đã hết hạn hoặc không hợp lệ');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, email: true, role: true, isActive: true, emailVerified: true },
+    });
+
+    if (!user || !user.isActive || !user.emailVerified) {
+      throw new UnauthorizedException('Refresh token không hợp lệ');
+    }
+
+    const newPayload = { sub: user.id, email: user.email, role: user.role };
+
+    const accessToken = this.jwtService.sign(newPayload, {
+      secret: process.env['JWT_SECRET'],
+      expiresIn: ACCESS_TOKEN_TTL,
+    });
+
+    const refreshToken = this.jwtService.sign(newPayload, {
+      secret: process.env['JWT_REFRESH_SECRET'],
+      expiresIn: REFRESH_TOKEN_TTL,
+    });
+
+    this.setTokenCookies(res, accessToken, refreshToken);
+
+    return { ok: true };
+  }
+
+  private setTokenCookies(res: Response, accessToken: string, refreshToken: string) {
+    const cookieBase = {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      secure: process.env['NODE_ENV'] === 'production',
+      path: '/',
+    };
+
+    res.cookie('access_token', accessToken, { ...cookieBase, maxAge: 15 * 60 * 1000 });
+    res.cookie('refresh_token', refreshToken, { ...cookieBase, maxAge: REFRESH_TOKEN_TTL_MS });
   }
 
   async register(dto: RegisterDto) {

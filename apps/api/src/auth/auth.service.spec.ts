@@ -1,8 +1,8 @@
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -35,6 +35,7 @@ function makeMockResponse() {
 
 describe('AuthService', () => {
   let service: AuthService;
+  let jwtService: JwtService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -47,6 +48,7 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
+    jwtService = module.get<JwtService>(JwtService);
   });
 
   describe('register', () => {
@@ -184,6 +186,76 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
 
       expect(res.cookie).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('refresh', () => {
+    const REFRESH_SECRET = 'test-refresh-secret';
+    const ACCESS_SECRET = 'test-access-secret';
+
+    beforeAll(() => {
+      process.env['JWT_REFRESH_SECRET'] = REFRESH_SECRET;
+      process.env['JWT_SECRET'] = ACCESS_SECRET;
+    });
+
+    afterAll(() => {
+      delete process.env['JWT_REFRESH_SECRET'];
+      delete process.env['JWT_SECRET'];
+    });
+
+    const activeUser = {
+      id: 'uuid-1',
+      email: 'test@example.com',
+      role: 'USER' as const,
+      isActive: true,
+      emailVerified: true,
+    };
+
+    function makeRequest(token: string | undefined): Request {
+      return { cookies: { refresh_token: token } } as unknown as Request;
+    }
+
+    it('issues new access and refresh token cookies with a valid refresh token', async () => {
+      const token = jwtService.sign(
+        { sub: activeUser.id, email: activeUser.email, role: activeUser.role },
+        { secret: REFRESH_SECRET, expiresIn: '7d' },
+      );
+      mockPrisma.user.findUnique.mockResolvedValue(activeUser);
+      const res = makeMockResponse();
+
+      const result = await service.refresh(makeRequest(token), res);
+
+      expect(res.cookie).toHaveBeenCalledWith('access_token', expect.any(String), expect.objectContaining({ httpOnly: true }));
+      expect(res.cookie).toHaveBeenCalledWith('refresh_token', expect.any(String), expect.objectContaining({ httpOnly: true }));
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('throws 401 when no refresh token cookie is present', async () => {
+      const res = makeMockResponse();
+
+      await expect(service.refresh(makeRequest(undefined), res)).rejects.toThrow(UnauthorizedException);
+      expect(res.cookie).not.toHaveBeenCalled();
+    });
+
+    it('throws 401 when refresh token is signed with wrong secret', async () => {
+      const token = jwtService.sign(
+        { sub: activeUser.id, email: activeUser.email, role: activeUser.role },
+        { secret: 'wrong-secret', expiresIn: '7d' },
+      );
+      const res = makeMockResponse();
+
+      await expect(service.refresh(makeRequest(token), res)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('throws 401 when user no longer exists', async () => {
+      const token = jwtService.sign(
+        { sub: activeUser.id, email: activeUser.email, role: activeUser.role },
+        { secret: REFRESH_SECRET, expiresIn: '7d' },
+      );
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      const res = makeMockResponse();
+
+      await expect(service.refresh(makeRequest(token), res)).rejects.toThrow(UnauthorizedException);
     });
   });
 });

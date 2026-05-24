@@ -5,6 +5,15 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (33) — Phase 3: Auth module — POST /auth/refresh
+
+**Files changed:**
+- `apps/api/src/auth/auth.service.ts`: Added `refresh()` — reads `refresh_token` HttpOnly cookie, verifies with `JWT_REFRESH_SECRET`, checks user still exists/active/verified, issues a rotated access token (15 min) + refresh token (7 days) as new HttpOnly cookies. Extracted `setTokenCookies()` helper shared with `login()`.
+- `apps/api/src/auth/auth.controller.ts`: Added `POST /auth/refresh` route using `@Req()` + `@Res({ passthrough: true })`.
+- `apps/api/src/auth/auth.service.spec.ts`: Added `refresh` describe block with 4 unit tests: valid token → new cookies issued; no cookie → 401; wrong secret → 401; user not found → 401. Uses `beforeAll`/`afterAll` to set JWT env secrets for the test scope.
+
+---
+
 ## 2026-05-24 (32b) — Review fix: POST /auth/login
 
 **Issues found and fixed:**
