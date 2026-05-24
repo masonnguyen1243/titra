@@ -5,6 +5,24 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (34b) — Review fix: POST /auth/logout
+
+**Issues found and fixed:**
+1. **Missing unit test** — test plan targets 90% auth service coverage and explicitly lists `POST /api/v1/auth/logout` in the integration test suite. No test existed. Fixed: added `logout` describe block in `auth.service.spec.ts` that asserts `clearCookie` is called for both `access_token` and `refresh_token` with `httpOnly: true, path: '/'` options, and that the return value is `{ ok: true }`.
+2. **`makeMockResponse` lacked `clearCookie` mock** — calling `logout` would throw `TypeError: res.clearCookie is not a function` in existing test infrastructure. Fixed: added `clearCookie: jest.fn()` to the mock response factory.
+
+All 12 auth service tests pass.
+
+---
+
+## 2026-05-24 (34) — Phase 3: Auth module — POST /auth/logout
+
+**Files changed:**
+- `apps/api/src/auth/auth.service.ts`: Added `logout()` — calls `res.clearCookie` for both `access_token` and `refresh_token` with the same cookie options used when setting them (`httpOnly`, `sameSite: lax`, `secure` in prod, `path: /`), then returns `{ ok: true }`.
+- `apps/api/src/auth/auth.controller.ts`: Added `POST /auth/logout` route; uses `@Res({ passthrough: true })` to write cookie-clearing headers while NestJS handles serialisation normally.
+
+---
+
 ## 2026-05-24 (33) — Phase 3: Auth module — POST /auth/refresh
 
 **Files changed:**

@@ -30,6 +30,7 @@ const mockPrisma = {
 function makeMockResponse() {
   return {
     cookie: jest.fn(),
+    clearCookie: jest.fn(),
   } as unknown as Response;
 }
 
@@ -186,6 +187,24 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
 
       expect(res.cookie).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('logout', () => {
+    it('clears both token cookies and returns { ok: true }', () => {
+      const res = makeMockResponse();
+
+      const result = service.logout(res);
+
+      expect(result).toEqual({ ok: true });
+      expect((res as unknown as { clearCookie: jest.Mock }).clearCookie).toHaveBeenCalledWith(
+        'access_token',
+        expect.objectContaining({ httpOnly: true, path: '/' }),
+      );
+      expect((res as unknown as { clearCookie: jest.Mock }).clearCookie).toHaveBeenCalledWith(
+        'refresh_token',
+        expect.objectContaining({ httpOnly: true, path: '/' }),
+      );
     });
   });
 

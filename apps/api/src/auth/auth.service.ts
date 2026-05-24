@@ -130,6 +130,18 @@ export class AuthService {
     return { ok: true };
   }
 
+  logout(res: Response) {
+    const cookieBase = {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      secure: process.env['NODE_ENV'] === 'production',
+      path: '/',
+    };
+    res.clearCookie('access_token', cookieBase);
+    res.clearCookie('refresh_token', cookieBase);
+    return { ok: true };
+  }
+
   private setTokenCookies(res: Response, accessToken: string, refreshToken: string) {
     const cookieBase = {
       httpOnly: true,
