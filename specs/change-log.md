@@ -5,6 +5,16 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (23) — Phase 2: Admin dashboard — Stats cards
+
+**Files created:**
+- `apps/web/app/(app)/admin/page.tsx`: admin overview page with three stat cards — **Tổng người dùng** (128, with +12 in last 30 days note), **Tổng sự kiện** (47, broken down into active/settled), **Tổng VNĐ theo dõi** (12.450.000 ₫, across all events). Each card uses a two-row layout: icon + label row, then large bold value + description row. Static/mock data (replaced by API in Phase 4). Server component.
+
+**Files changed:**
+- `apps/web/app/(app)/layout.tsx`: added "Quản trị" nav link pointing to `/admin` so the page is reachable from the app shell.
+
+---
+
 ## 2026-05-24 (22) — Phase 2: Invite link display with Copy button
 
 **Files changed:**

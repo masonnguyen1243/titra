@@ -10,6 +10,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <a href="/dashboard" className="hover:text-foreground transition-colors">
             Chuyến đi
           </a>
+          <a href="/admin" className="hover:text-foreground transition-colors">
+            Quản trị
+          </a>
         </nav>
       </header>
       <main className="flex-1 container max-w-5xl mx-auto py-8 px-4">{children}</main>
