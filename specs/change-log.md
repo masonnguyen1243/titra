@@ -5,6 +5,16 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (19) — Phase 2: Record Settlement form
+
+**Files created:**
+- `apps/web/components/features/record-settlement-dialog.tsx`: Dialog for recording a new settlement. Fields: **Người trả** — pill selector for the payer; **Trả cho** — pill selector for the recipient (inline error if payer = recipient); **Số tiền** — VND integer input with formatted preview; **Hình thức thanh toán** — pill toggle: MoMo / VNPay / Tiền mặt / Khác; **Proof upload** — dashed drop zone for JPG/PNG/HEIC ≤ 5 MB with filename display and remove button. Submit button disabled until all required fields are valid.
+
+**Files changed:**
+- `apps/web/app/(app)/events/[id]/settlements/page.tsx`: converted to a stateful client component. Added "Ghi nhận thanh toán" button (in header row when settlements exist, and in empty-state CTA). Wired `RecordSettlementDialog`; new settlements are appended with status `PENDING`. Member lists added for events `1` and `2`.
+
+---
+
 ## 2026-05-24 (18) — Phase 2: Settlements tab
 
 **Files changed:**
