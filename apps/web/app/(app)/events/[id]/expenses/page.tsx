@@ -1,9 +1,13 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Receipt } from 'lucide-react';
+import AddExpenseDialog, {
+  type Member,
+  type NewExpense,
+} from '@/components/features/add-expense-dialog';
 
 type ExpenseCategory = 'FOOD' | 'TRANSPORT' | 'ACCOMMODATION' | 'ACTIVITY' | 'OTHER';
 
@@ -16,7 +20,7 @@ interface Expense {
   date: string;
 }
 
-const MOCK_EXPENSES: Record<string, Expense[]> = {
+const SEED_EXPENSES: Record<string, Expense[]> = {
   '1': [
     {
       id: 'e1',
@@ -79,6 +83,33 @@ const MOCK_EXPENSES: Record<string, Expense[]> = {
   ],
 };
 
+const MOCK_MEMBERS: Record<string, Member[]> = {
+  '1': [
+    { id: 'm1', name: 'Minh Anh' },
+    { id: 'm2', name: 'Hùng' },
+    { id: 'm3', name: 'Linh' },
+    { id: 'm4', name: 'Tuấn' },
+    { id: 'm5', name: 'An' },
+    { id: 'm6', name: 'Ngọc' },
+  ],
+  '2': [
+    { id: 'm1', name: 'Lan' },
+    { id: 'm2', name: 'Dũng' },
+    { id: 'm3', name: 'Nam' },
+    { id: 'm4', name: 'Phương' },
+    { id: 'm5', name: 'Hà' },
+    { id: 'm6', name: 'Khoa' },
+    { id: 'm7', name: 'Thắng' },
+    { id: 'm8', name: 'Bình' },
+    { id: 'm9', name: 'Quân' },
+    { id: 'm10', name: 'Mai' },
+    { id: 'm11', name: 'Tùng' },
+    { id: 'm12', name: 'Phúc' },
+  ],
+};
+
+const DEFAULT_MEMBERS: Member[] = [{ id: 'u1', name: 'Bạn' }];
+
 const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   FOOD: 'Ăn uống',
   TRANSPORT: 'Di chuyển',
@@ -102,61 +133,94 @@ function formatVND(amount: number): string {
   return amount.toLocaleString('vi-VN') + ' ₫';
 }
 
+let nextId = 100;
+
 export default function ExpensesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const expenses = MOCK_EXPENSES[id] ?? [];
+  const [expenses, setExpenses] = useState<Expense[]>(SEED_EXPENSES[id] ?? []);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const members = MOCK_MEMBERS[id] ?? DEFAULT_MEMBERS;
 
-  if (expenses.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-        <Receipt className="h-10 w-10 text-muted-foreground/40" />
-        <div className="space-y-1">
-          <p className="font-medium text-sm">Chưa có chi phí nào</p>
-          <p className="text-muted-foreground text-sm">Hãy thêm chi phí đầu tiên cho sự kiện này.</p>
-        </div>
-        <Button size="sm" className="mt-1">
-          <Plus className="h-4 w-4 mr-1.5" />
-          Thêm chi phí
-        </Button>
-      </div>
-    );
+  function handleAdd(expense: NewExpense) {
+    setExpenses((prev) => [
+      ...prev,
+      {
+        id: `new-${++nextId}`,
+        description: expense.description,
+        amount: expense.amount,
+        category: expense.category,
+        payer: expense.payer,
+        date: expense.date,
+      },
+    ]);
   }
 
-  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {expenses.length} khoản · Tổng{' '}
-          <span className="font-semibold text-foreground">{formatVND(total)}</span>
-        </p>
-        <Button size="sm">
-          <Plus className="h-4 w-4 mr-1.5" />
-          Thêm chi phí
-        </Button>
-      </div>
-
-      <div className="divide-y rounded-lg border">
-        {expenses.map((expense) => (
-          <div key={expense.id} className="flex items-center justify-between gap-4 px-4 py-3.5">
-            <div className="min-w-0 space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-medium text-sm truncate">{expense.description}</span>
-                <Badge variant={CATEGORY_VARIANTS[expense.category]} className="text-xs shrink-0">
-                  {CATEGORY_LABELS[expense.category]}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {expense.payer} · {new Date(expense.date).toLocaleDateString('vi-VN')}
-              </p>
-            </div>
-            <span className="font-semibold text-sm shrink-0 tabular-nums">
-              {formatVND(expense.amount)}
-            </span>
+    <>
+      {expenses.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+          <Receipt className="h-10 w-10 text-muted-foreground/40" />
+          <div className="space-y-1">
+            <p className="font-medium text-sm">Chưa có chi phí nào</p>
+            <p className="text-muted-foreground text-sm">
+              Hãy thêm chi phí đầu tiên cho sự kiện này.
+            </p>
           </div>
-        ))}
-      </div>
-    </div>
+          <Button size="sm" className="mt-1" onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Thêm chi phí
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {expenses.length} khoản · Tổng{' '}
+              <span className="font-semibold text-foreground">
+                {formatVND(expenses.reduce((sum, e) => sum + e.amount, 0))}
+              </span>
+            </p>
+            <Button size="sm" onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-1.5" />
+              Thêm chi phí
+            </Button>
+          </div>
+
+          <div className="divide-y rounded-lg border">
+            {expenses.map((expense) => (
+              <div
+                key={expense.id}
+                className="flex items-center justify-between gap-4 px-4 py-3.5"
+              >
+                <div className="min-w-0 space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm truncate">{expense.description}</span>
+                    <Badge
+                      variant={CATEGORY_VARIANTS[expense.category]}
+                      className="text-xs shrink-0"
+                    >
+                      {CATEGORY_LABELS[expense.category]}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {expense.payer} · {new Date(expense.date).toLocaleDateString('vi-VN')}
+                  </p>
+                </div>
+                <span className="font-semibold text-sm shrink-0 tabular-nums">
+                  {formatVND(expense.amount)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <AddExpenseDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        members={members}
+        onAdd={handleAdd}
+      />
+    </>
   );
 }

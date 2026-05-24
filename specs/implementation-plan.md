@@ -221,10 +221,10 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 - [x] Event shell with tab navigation: Expenses · Balances · Settlements · Chat · Members
 - [x] Expenses tab: list of expenses with payer, amount, description, category chip
-- [ ] Add Expense form:
-  - [ ] Equal split mode (member checkboxes, per-person amount shown live)
-  - [ ] Custom split mode (amount input per member, running total shown)
-  - [ ] Receipt photo upload field
+- [x] Add Expense form:
+  - [x] Equal split mode (member checkboxes, per-person amount shown live)
+  - [x] Custom split mode (amount input per member, running total shown)
+  - [x] Receipt photo upload field
 - [ ] Balances tab: net position per member + simplified "X owes Y: Z ₫" list
 - [ ] Settlements tab: list of settlements with status badges (PENDING / CONFIRMED)
 - [ ] Record Settlement form (select payer, amount, method, upload proof)
