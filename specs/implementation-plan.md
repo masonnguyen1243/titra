@@ -10,6 +10,7 @@
 **Chosen: PostgreSQL + Prisma ORM**
 
 Rationale:
+
 - Financial data requires ACID transactions — PostgreSQL is the standard choice.
 - Prisma gives type-safe queries that align with TypeScript strict mode.
 - VND has no decimal places; integer storage avoids all floating-point errors.
@@ -95,7 +96,9 @@ titra/
 ## Key Technical Decisions
 
 ### Balance Calculation Algorithm
+
 Use the "minimum cash flow" algorithm:
+
 1. Compute each member's net balance = (total paid) − (total owed).
 2. Split into creditors (positive) and debtors (negative).
 3. Greedily match the largest debtor with the largest creditor until all balances are zero.
@@ -104,12 +107,15 @@ Use the "minimum cash flow" algorithm:
 Runs in O(n log n); sufficient for groups up to 50 members.
 
 ### Split Rounding
+
 When splitting equally and the amount is not divisible by n, the remainder goes to the first member in the list. This is deterministic and shown transparently in the UI.
 
 ### Real-time Chat
+
 Socket.io with NestJS gateway. Falls back to 5-second polling when WebSocket is blocked. No typing indicators or presence in MVP.
 
 ### PDF Generation
+
 Generated server-side with `@react-pdf/renderer` inside the NestJS export module. Puppeteer is avoided to keep the container small and cold starts fast.
 
 ---
@@ -148,9 +154,11 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ## Phase Plan
 
 ### Phase 1 — Project Setup
+
 **Goal:** Empty repo → fully runnable skeleton with linting, types, and DB connected.
 
 **Monorepo & tooling**
+
 - [x] Init pnpm workspace + Turborepo
 - [x] Configure `turbo.json` with `dev`, `build`, `lint`, `typecheck` pipelines
 - [x] Add root `package.json` scripts that delegate to Turborepo
@@ -158,6 +166,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Enable TypeScript strict mode in all `tsconfig.json` files
 
 **Frontend skeleton**
+
 - [x] Scaffold `apps/web` with Next.js 15 (App Router)
 - [x] Install and configure TailwindCSS
 - [x] Install shadcn/ui, add base components: Button, Input, Card, Dialog, Tabs, Toast
@@ -165,6 +174,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Add route groups: `(auth)` and `(app)`
 
 **Backend skeleton**
+
 - [x] Scaffold `apps/api` with NestJS
 - [x] Configure global prefix `/api/v1`
 - [x] Add `helmet`, `compression`, and CORS middleware
@@ -172,15 +182,18 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Add health-check endpoint `GET /api/v1/health`
 
 **Database**
+
 - [x] Add Prisma to `apps/api`, connect to PostgreSQL (Neon)
 - [x] Write full initial schema: User, Event, EventMember, Expense, ExpenseSplit, Settlement, Message
-- [ ] Run first migration, confirm connection works ← requires DATABASE_URL
+- [x] Run first migration, confirm connection works
 
 **Shared package**
+
 - [x] Scaffold `packages/shared` with Zod
 - [x] Add base Zod schemas matching the DB schema (used later for validation)
 
 **Config & CI**
+
 - [x] Create `.env.example` with all required variables
 - [x] Add `.env` to `.gitignore`
 - [x] Add GitHub Actions workflow: lint + typecheck + unit tests on every push
@@ -188,20 +201,24 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ---
 
 ### Phase 2 — Core UI
+
 **Goal:** All screens built with static/hardcoded data. No real API calls yet. Focus on layout, navigation, and user experience.
 
 **Auth screens**
+
 - [ ] Login page (email + password form, Google OAuth button)
 - [ ] Register page (name, email, password)
 - [ ] Forgot password page (email input)
 - [ ] Email sent confirmation screen
 
 **Dashboard**
+
 - [ ] Event list page (cards showing event name, type, member count, status)
 - [ ] Empty state: "Bạn chưa có chuyến đi nào" with Create button
 - [ ] Create event form (name, type, description, cover photo upload)
 
 **Event detail**
+
 - [ ] Event shell with tab navigation: Expenses · Balances · Settlements · Chat · Members
 - [ ] Expenses tab: list of expenses with payer, amount, description, category chip
 - [ ] Add Expense form:
@@ -216,11 +233,13 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [ ] Invite link display with Copy button
 
 **Admin dashboard**
+
 - [ ] Stats cards: total users, total events, total VND tracked
 - [ ] User table: email, role, status, registered date, Deactivate button
 - [ ] Event table: name, organizer, status, member count, Archive button
 
 **Shared components**
+
 - [ ] Loading skeleton component (used across all data-heavy pages)
 - [ ] Empty state component (reusable with custom icon + message)
 - [ ] Avatar component (initials fallback if no photo)
@@ -230,9 +249,11 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ---
 
 ### Phase 3 — Core Backend & Data Logic
+
 **Goal:** All API endpoints implemented and returning real data. Business logic unit-tested.
 
 **Auth module**
+
 - [ ] `POST /auth/register` — create user, hash password (bcrypt), queue verification email
 - [ ] `POST /auth/login` — validate credentials, return JWT pair in HttpOnly cookies
 - [ ] `POST /auth/refresh` — rotate refresh token, return new access token
@@ -243,10 +264,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [ ] JWT auth guard + role guard (ADMIN, ORGANIZER, MEMBER)
 
 **Users module**
+
 - [ ] `GET /users/me` — return current user profile
 - [ ] `PATCH /users/me` — update name and avatar
 
 **Events module**
+
 - [ ] `POST /events` — create event, auto-add organizer as ORGANIZER member
 - [ ] `GET /events` — list events the current user belongs to
 - [ ] `GET /events/:id` — get event detail (members-only access)
@@ -258,6 +281,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [ ] `DELETE /events/:id/members/:memberId` — remove member (organizer only)
 
 **Expenses module**
+
 - [ ] `POST /events/:id/expenses` — create expense + splits (equal or custom)
 - [ ] `GET /events/:id/expenses` — list all non-deleted expenses
 - [ ] `PATCH /events/:id/expenses/:expenseId` — edit expense (creator or organizer)
@@ -267,6 +291,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [ ] Cloudinary upload service (receipt photos)
 
 **Settlements module**
+
 - [ ] `POST /events/:id/settlements` — record settlement (status: PENDING)
 - [ ] `GET /events/:id/settlements` — list all settlements
 - [ ] `PATCH /events/:id/settlements/:settlementId/confirm` — confirm (recipient or organizer)
@@ -275,20 +300,24 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [ ] VNPay deep-link generator utility
 
 **Notifications module**
+
 - [ ] `POST /events/:id/reminders` — send email reminder to a debtor (organizer only)
 - [ ] Rate-limit check: reject if reminder sent in last 24h for this member
 - [ ] Resend email service (reminder template + PDF download link)
 
 **Messages module**
+
 - [ ] `GET /events/:id/messages` — fetch message history (paginated)
 - [ ] `POST /events/:id/messages` — post a message (REST fallback)
 - [ ] Socket.io gateway: `joinRoom`, `leaveRoom`, `sendMessage`, `newMessage` events
 
 **Export module**
+
 - [ ] `POST /events/:id/export/pdf` — generate PDF report, upload to Cloudinary, return URL
 - [ ] PDF content: event summary, expense list, balance table, settlement history
 
 **Admin module**
+
 - [ ] `GET /admin/users` — paginated user list
 - [ ] `PATCH /admin/users/:id` — activate / deactivate user
 - [ ] `GET /admin/events` — paginated event list
@@ -298,14 +327,17 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ---
 
 ### Phase 4 — Connect UI to Data
+
 **Goal:** Replace all static data in the UI with live API calls.
 
 **API client setup**
+
 - [ ] Create typed fetch wrapper in `apps/web/lib/api.ts` (attaches JWT, handles 401 refresh)
 - [ ] Configure TanStack Query provider in the app root
 - [ ] Define typed query/mutation hooks per domain in `apps/web/lib/hooks/`
 
 **Auth**
+
 - [ ] Wire login form → `POST /auth/login` → redirect to dashboard on success
 - [ ] Wire register form → `POST /auth/register` → show "check your email" screen
 - [ ] Wire forgot password form → `POST /auth/forgot-password`
@@ -313,49 +345,59 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [ ] Protect `/admin` routes: redirect to `/dashboard` if not Admin
 
 **Dashboard & events**
+
 - [ ] Dashboard fetches and renders real event list
 - [ ] Create Event form submits → redirects to new event detail page
 - [ ] Event detail fetches event data and member list
 
 **Expenses**
+
 - [ ] Expense list fetches real expenses for the event
 - [ ] Add Expense form submits with correct split payload
 - [ ] Edit and delete actions wired up with optimistic UI updates
 - [ ] Receipt photo: upload to Cloudinary via signed URL before form submit
 
 **Balances**
+
 - [ ] Balance tab fetches `/balances` endpoint and renders simplified transaction list
 - [ ] Live recalculates after any expense create/edit/delete
 
 **Settlements**
+
 - [ ] Settlement list fetches real data with status badges
 - [ ] Record Settlement form submits and shows PENDING entry immediately
 - [ ] Confirm and reject buttons wired to API; balance view updates after confirm
 
 **Reminders**
+
 - [ ] Send Reminder button (organizer only) calls notifications API
 - [ ] Shows "last reminded at …" from API response
 - [ ] Disables button with countdown if within 24h rate limit window
 
 **Chat**
+
 - [ ] On mount, connect to Socket.io room for the event
 - [ ] Fetch message history via REST on load
 - [ ] Send message over WebSocket; append to list on `newMessage` event
 - [ ] Fall back to polling if WebSocket connection fails
 
 **PDF export**
+
 - [ ] Export button calls `/export/pdf`, shows loading state, then download link
 
 **Admin**
+
 - [ ] Admin dashboard fetches stats, user list, and event list
 - [ ] Deactivate/activate and archive actions wired to admin endpoints
 
 ---
 
 ### Phase 5 — Validation and Error States
+
 **Goal:** Every form and every page handles bad input and failures gracefully.
 
 **Form validation (React Hook Form + Zod)**
+
 - [ ] Login: required fields, valid email format
 - [ ] Register: required fields, valid email, password min 8 chars, passwords match
 - [ ] Create Event: name required, type required
@@ -364,6 +406,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [ ] Chat input: non-empty message
 
 **API error handling**
+
 - [ ] 400 Bad Request → show field-level error messages in Vietnamese
 - [ ] 401 Unauthorized → clear session, redirect to login
 - [ ] 403 Forbidden → show "Bạn không có quyền thực hiện thao tác này"
@@ -373,11 +416,13 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [ ] Network offline → show "Mất kết nối, đang thử lại…" banner
 
 **Loading states**
+
 - [ ] Skeleton loaders on: dashboard event list, expense list, balance view, settlement list, chat history, admin tables
 - [ ] Spinner on all form submit buttons while request is in flight
 - [ ] Disable submit button after click to prevent double-submit
 
 **Empty states**
+
 - [ ] Dashboard: no events yet
 - [ ] Expense list: no expenses logged
 - [ ] Balance view: everyone is settled (zero balances)
@@ -386,6 +431,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [ ] Admin user/event tables: no results
 
 **Edge cases**
+
 - [ ] Invite link: expired or invalid token → show friendly error and link to register
 - [ ] Custom split: real-time sum display turns red when it doesn't match the total
 - [ ] Receipt upload: file too large (> 5 MB) or wrong type → show error before upload
@@ -394,6 +440,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ---
 
 ### Phase 6 — Local Run Instructions
+
 **Goal:** Any developer (or the user demoing) can get the full stack running locally in under 10 minutes.
 
 - [ ] Document prerequisites in `README.md`:
@@ -420,6 +467,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ---
 
 ### Phase 7 — ngrok Demo Setup
+
 **Goal:** Share a working live demo from localhost with anyone via a public URL.
 
 - [ ] Add ngrok setup instructions to `README.md` under a "Demo / Sharing" section:

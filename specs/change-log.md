@@ -15,7 +15,7 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 - `packages/shared`: Zod schemas for auth, events, expenses, settlements
 - `.github/workflows/ci.yml`: lint + typecheck + test on push/PR
 
-**Pending:** Run `pnpm db:migrate` once `DATABASE_URL` is set in `.env`.
+**Pending:** ~~Run `pnpm db:migrate` once `DATABASE_URL` is set in `.env`.~~ ✓ Done.
 
 ---
 
