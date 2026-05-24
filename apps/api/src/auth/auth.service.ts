@@ -218,6 +218,28 @@ export class AuthService {
     return { ok: true };
   }
 
+  async health() {
+    const jwtConfigured =
+      !!process.env['JWT_SECRET'] && !!process.env['JWT_REFRESH_SECRET'];
+
+    let dbOk = false;
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+      dbOk = true;
+    } catch {
+      dbOk = false;
+    }
+
+    return {
+      status: jwtConfigured && dbOk ? 'ok' : 'degraded',
+      checks: {
+        database: dbOk ? 'ok' : 'error',
+        jwtConfig: jwtConfigured ? 'ok' : 'error',
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   logout(res: Response) {
     const cookieBase = {
       httpOnly: true,

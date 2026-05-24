@@ -262,6 +262,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] `POST /auth/forgot-password` — send reset link
 - [x] `POST /auth/reset-password` — validate token, update password
 - [x] JWT auth guard + role guard (ADMIN, ORGANIZER, MEMBER)
+- [x] `GET /auth/health` — public endpoint that checks JWT config and DB connectivity for the auth subsystem
 
 **Users module**
 

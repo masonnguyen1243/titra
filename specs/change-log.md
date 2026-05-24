@@ -5,6 +5,16 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (39) — Phase 3: Auth module — GET /auth/health
+
+**Files changed:**
+- `apps/api/src/auth/auth.service.ts`: Added `health()` — runs `SELECT 1` against the DB via Prisma and checks that both `JWT_SECRET` and `JWT_REFRESH_SECRET` env vars are set; returns `{ status, checks: { database, jwtConfig }, timestamp }`. Status is `"ok"` when both checks pass, `"degraded"` otherwise.
+- `apps/api/src/auth/auth.controller.ts`: Added `GET /auth/health` handler; decorated with `@Get('health') @HttpCode(200)`. Inherits `@Public()` from the class so no JWT is required.
+
+Also regenerated the Prisma client (`npx prisma generate`) to fix pre-existing type errors where `passwordResetToken` / `passwordResetExpiry` were missing from the generated types.
+
+---
+
 ## 2026-05-24 (38) — Phase 3: Auth module — JWT auth guard + role guard
 
 **Files changed:**
