@@ -5,6 +5,12 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (2) — Spec revision
+
+- Rewrote `specs/product-spec.md` to v0.2: added explicit App Goal, Target Users, Core User Flow diagram, per-feature Acceptance Criteria, and Out of Scope table. Data model condensed to summary table.
+
+---
+
 ## 2026-05-24 — Phase 0
 
 - Initialized project workspace at `/Users/mason/Workspace/masonnguyen/titra`.
