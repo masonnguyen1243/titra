@@ -5,6 +5,13 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (21) — Phase 2: Members tab
+
+**Files changed:**
+- `apps/web/app/(app)/events/[id]/members/page.tsx`: replaced stub with a full stateful client component. Each row shows an avatar initial bubble, member name (with "(bạn)" suffix for the current user), a role badge (Ban tổ chức / Thành viên / Khách), and the member's email when available. Role badge uses `default` variant for organizer, `secondary` for member, `outline` for guest. **Remove button**: shown only when the current user is the organizer, only on non-organizer members, and never on the current user's own row. Clicking opens a confirmation `Dialog` explaining that the member's existing expenses are preserved. Confirming filters the member from local state. Seed data for events `1` (6 members: 1 organizer, 3 members, 2 guests) and `2` (7 members).
+
+---
+
 ## 2026-05-24 (20) — Phase 2: Chat tab
 
 **Files changed:**
