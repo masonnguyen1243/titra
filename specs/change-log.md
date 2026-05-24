@@ -5,6 +5,13 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (24) — Phase 2: Admin dashboard — User table
+
+**Files changed:**
+- `apps/web/app/(app)/admin/page.tsx`: converted from server to client component (needed for Deactivate toggle). Added a **Người dùng** section below the stats cards with a full-width `<table>` showing: name + email (stacked), role badge (**Quản trị** / **Người dùng**), status badge (**Hoạt động** in outline / **Đã vô hiệu** in destructive red), formatted registration date (dd/mm/yyyy), and an action button. **Deactivate/Activate button** toggling `ACTIVE ↔ INACTIVE` in local state; hidden for ADMIN-role users to prevent self-lockout. Mock seed: 6 users (1 admin + 5 regular, one pre-set to INACTIVE).
+
+---
+
 ## 2026-05-24 (23) — Phase 2: Admin dashboard — Stats cards
 
 **Files created:**
