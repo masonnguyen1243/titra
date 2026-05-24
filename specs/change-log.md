@@ -5,6 +5,31 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (31b) — Review fix: POST /auth/register
+
+**Issues found and fixed:**
+1. **HTML injection in verification email** — `name` was interpolated raw into the HTML email body. A user with a name containing `<`, `>`, or `&` would break email rendering; a crafted name could inject arbitrary HTML. Fixed: added `escapeHtml()` helper in `auth.service.ts` that escapes `&`, `<`, `>`, `"`, `'`; used it when building the email `html` string.
+2. **Missing unit tests** — test plan requires AuthService unit tests at 90% coverage with specific cases. Fixed: created `src/auth/auth.service.spec.ts` covering all three test plan cases: (a) valid registration → user created with hashed password and safe fields returned; (b) duplicate email → 409 ConflictException; (c) verification token stored with a 24h future expiry. All 3 tests pass.
+3. **Missing `@nestjs/testing`** — dev dependency required by Jest test module; added to `apps/api/package.json`.
+
+---
+
+## 2026-05-24 (31) — Phase 3: Auth module — POST /auth/register
+
+**Files created:**
+- `apps/api/src/auth/auth.module.ts`: NestJS module wiring `AuthController` and `AuthService`.
+- `apps/api/src/auth/auth.controller.ts`: `POST /api/v1/auth/register` — returns 201 with safe user fields (no password hash).
+- `apps/api/src/auth/auth.service.ts`: `register()` — checks email uniqueness (409 on conflict), hashes password with bcrypt (12 rounds), generates a UUID verification token (24h TTL), writes the user to DB, then sends a verification email. If `RESEND_API_KEY` is set, sends via Resend; otherwise logs the verification URL.
+- `apps/api/src/auth/dto/register.dto.ts`: `RegisterDto` — `name` (string), `email` (valid email), `password` (min 8 chars) validated with `class-validator`.
+- `apps/api/prisma/migrations/20260524_add_verification_token_to_user/migration.sql`: adds `verificationToken` (unique, nullable) and `verificationTokenExpiry` (nullable DateTime) columns to `users` table.
+
+**Files changed:**
+- `apps/api/prisma/schema.prisma`: added `verificationToken String? @unique` and `verificationTokenExpiry DateTime?` fields to `User` model.
+- `apps/api/src/app.module.ts`: imported `AuthModule`.
+- `apps/api/package.json`: added `bcrypt`, `@types/bcrypt`, and `resend` dependencies.
+
+---
+
 ## 2026-05-24 (30) — Phase 2: Shared components — Status badge component
 
 **Files created:**

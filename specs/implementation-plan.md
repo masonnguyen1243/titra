@@ -254,7 +254,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Auth module**
 
-- [ ] `POST /auth/register` — create user, hash password (bcrypt), queue verification email
+- [x] `POST /auth/register` — create user, hash password (bcrypt), queue verification email
 - [ ] `POST /auth/login` — validate credentials, return JWT pair in HttpOnly cookies
 - [ ] `POST /auth/refresh` — rotate refresh token, return new access token
 - [ ] `POST /auth/logout` — clear cookies
