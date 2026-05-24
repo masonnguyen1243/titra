@@ -270,6 +270,68 @@ describe('AuthService', () => {
     });
   });
 
+  describe('resetPassword', () => {
+    const futureExpiry = new Date(Date.now() + 60 * 60 * 1000);
+    const pastExpiry = new Date(Date.now() - 60 * 60 * 1000);
+
+    it('hashes the new password, updates the user, and clears the reset token', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-1',
+        passwordResetExpiry: futureExpiry,
+      });
+      mockPrisma.user.update.mockResolvedValue({});
+
+      const result = await service.resetPassword({ token: 'valid-token', password: 'newpass123' });
+
+      expect(result).toEqual({ ok: true });
+      expect(bcrypt.hash).toHaveBeenCalledWith('newpass123', 12);
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'uuid-1' },
+        data: {
+          passwordHash: 'hashed_password',
+          passwordResetToken: null,
+          passwordResetExpiry: null,
+        },
+      });
+    });
+
+    it('throws 400 BadRequestException for an unknown token', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.resetPassword({ token: 'unknown-token', password: 'newpass123' }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('throws 400 BadRequestException for an expired token', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-1',
+        passwordResetExpiry: pastExpiry,
+      });
+
+      await expect(
+        service.resetPassword({ token: 'expired-token', password: 'newpass123' }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('throws 400 BadRequestException when passwordResetExpiry is null', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-1',
+        passwordResetExpiry: null,
+      });
+
+      await expect(
+        service.resetPassword({ token: 'no-expiry-token', password: 'newpass123' }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('forgotPassword', () => {
     const activeUser = {
       id: 'uuid-1',

@@ -260,7 +260,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] `POST /auth/logout` — clear cookies
 - [x] `POST /auth/verify-email` — verify token from email link
 - [x] `POST /auth/forgot-password` — send reset link
-- [ ] `POST /auth/reset-password` — validate token, update password
+- [x] `POST /auth/reset-password` — validate token, update password
 - [ ] JWT auth guard + role guard (ADMIN, ORGANIZER, MEMBER)
 
 **Users module**

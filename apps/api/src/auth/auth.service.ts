@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 const BCRYPT_ROUNDS = 12;
 const VERIFICATION_TOKEN_TTL_HOURS = 24;
@@ -157,6 +158,34 @@ export class AuthService {
         emailVerified: true,
         verificationToken: null,
         verificationTokenExpiry: null,
+      },
+    });
+
+    return { ok: true };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { passwordResetToken: dto.token },
+      select: { id: true, passwordResetExpiry: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Liên kết đặt lại mật khẩu không hợp lệ');
+    }
+
+    if (!user.passwordResetExpiry || user.passwordResetExpiry < new Date()) {
+      throw new BadRequestException('Liên kết đặt lại mật khẩu đã hết hạn');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        passwordResetToken: null,
+        passwordResetExpiry: null,
       },
     });
 

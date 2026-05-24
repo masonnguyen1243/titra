@@ -5,6 +5,18 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (37) — Phase 3: Auth module — POST /auth/reset-password
+
+**Files changed:**
+- `apps/api/src/auth/dto/reset-password.dto.ts` *(new)*: `ResetPasswordDto` with `token` (`@IsString @IsNotEmpty`) and `password` (`@MinLength(8)`) fields.
+- `apps/api/src/auth/auth.service.ts`: Added `resetPassword()` — looks up user by `passwordResetToken` (unique index); throws 400 if not found; throws 400 if `passwordResetExpiry` is null or in the past; hashes the new password with bcrypt (12 rounds); updates user with new `passwordHash` and nulls out both reset token fields; returns `{ ok: true }`.
+- `apps/api/src/auth/auth.controller.ts`: Added `POST /auth/reset-password` route using `@Body() ResetPasswordDto`, returns 200.
+- `apps/api/src/auth/auth.service.spec.ts`: Added `resetPassword` describe block with 4 cases: valid token → password hashed and token cleared; unknown token → 400; expired token → 400; null expiry → 400.
+
+All 24 auth service tests pass. Ran `npx prisma generate` to ensure Prisma client reflects `passwordResetToken @unique` in `UserWhereUniqueInput`.
+
+---
+
 ## 2026-05-24 (36) — Phase 3: Auth module — POST /auth/forgot-password
 
 **Files changed:**
