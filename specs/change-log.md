@@ -5,6 +5,24 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (6) — Phase 2: Register page
+
+**Files changed:**
+- `apps/web/app/(auth)/register/page.tsx`: replaced placeholder with full register form — name field, email field, password field, "Tạo tài khoản" button, Google OAuth button, link back to login page. Client component with controlled inputs. No API calls yet.
+
+---
+
+## 2026-05-24 (5) — Phase 2: Login page
+
+**Files changed:**
+- `apps/web/app/(auth)/login/page.tsx`: replaced placeholder with full login form — email field, password field with "Quên mật khẩu?" link, Login button, Google OAuth button, link to register page. Client component with controlled inputs. No API calls yet.
+
+**Fix — review against acceptance criteria:**
+- Wrapped email/password fields and submit button in a `<form>` element so Enter key submits and password managers work correctly.
+- Removed explicit `React.FormEvent` type annotation (deprecated in React 19); used inline `onSubmit={(e) => e.preventDefault()}` instead.
+
+---
+
 ## 2026-05-24 (4) — Phase 1: Project Setup complete
 
 **Files created:**

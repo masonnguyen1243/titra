@@ -206,8 +206,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Auth screens**
 
-- [ ] Login page (email + password form, Google OAuth button)
-- [ ] Register page (name, email, password)
+- [x] Login page (email + password form, Google OAuth button)
+- [x] Register page (name, email, password)
 - [ ] Forgot password page (email input)
 - [ ] Email sent confirmation screen
 
