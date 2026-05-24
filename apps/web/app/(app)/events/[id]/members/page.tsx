@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Avatar } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
@@ -133,9 +134,7 @@ export default function MembersPage({ params }: { params: Promise<{ id: string }
             return (
               <div key={member.id} className="flex items-center justify-between gap-4 px-4 py-3.5">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-sm font-semibold shrink-0">
-                    {member.name.charAt(0)}
-                  </div>
+                  <Avatar name={member.name} size="lg" />
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-sm">

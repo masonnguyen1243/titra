@@ -5,6 +5,26 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (28b) — Review fix: Avatar component
+
+**Issues found and fixed in `apps/web/components/ui/avatar.tsx`:**
+1. **Runtime error on external `src` URLs** — used `next/image` which requires `remotePatterns` in `next.config.ts` for Cloudinary URLs; any external avatar URL would throw at runtime. Fixed: switched to a plain `<img>` tag with an `eslint-disable` comment explaining the intent. This avoids domain config requirements while keeping the photo path working for all URL origins.
+2. **WCAG 2.1 AA — missing accessible label on initials** — spec §8 requires WCAG 2.1 AA for core flows; the initials `<div>` rendered as unlabelled presentational text. Fixed: added `role="img"` and `aria-label={name}` so screen readers announce the person's name instead of raw initials.
+
+---
+
+## 2026-05-24 (28) — Phase 2: Shared components — Avatar component
+
+**Files created:**
+- `apps/web/components/ui/avatar.tsx`: `Avatar` component. Props: `name` (required — used for initials and `alt`), `src` (optional image URL), `size` (`'sm'` 28 px / `'md'` 32 px / `'lg'` 36 px, default `'md'`), `className`. Initials logic: single-word names → first letter; multi-word names → first + last word initials (e.g. "Minh Anh" → "MA"). When `src` is provided, renders a Next.js `<Image>` inside the circle. Falls back to initials when `src` is absent.
+
+**Files changed:**
+- `apps/web/app/(app)/events/[id]/balances/page.tsx`: replaced inline `h-8 w-8` avatar div with `<Avatar name={member.name} size="md" />`.
+- `apps/web/app/(app)/events/[id]/members/page.tsx`: replaced inline `h-9 w-9` avatar div with `<Avatar name={member.name} size="lg" />`.
+- `apps/web/app/(app)/events/[id]/chat/page.tsx`: replaced inline `h-7 w-7` avatar div (with conditional `invisible` class) with `<Avatar name={msg.sender} size="sm" className={cn('mt-0.5', !showSender && 'invisible')} />`.
+
+---
+
 ## 2026-05-24 (27) — Phase 2: Shared components — Empty state component
 
 **Files created:**

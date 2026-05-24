@@ -3,6 +3,7 @@
 import { use } from 'react';
 import { TrendingUp, TrendingDown, Minus, ArrowRight, PartyPopper } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Avatar } from '@/components/ui/avatar';
 
 type ExpenseCategory = 'FOOD' | 'TRANSPORT' | 'ACCOMMODATION' | 'ACTIVITY' | 'OTHER';
 
@@ -157,9 +158,7 @@ export default function BalancesPage({ params }: { params: Promise<{ id: string 
             return (
               <div key={member.id} className="flex items-center justify-between gap-4 px-4 py-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-semibold shrink-0">
-                    {member.name.charAt(0)}
-                  </div>
+                  <Avatar name={member.name} size="md" />
                   <span className="text-sm font-medium">{member.name}</span>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">

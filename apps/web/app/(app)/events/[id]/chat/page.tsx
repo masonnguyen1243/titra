@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { MessageCircle, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Avatar } from '@/components/ui/avatar';
 
 interface Message {
   id: string;
@@ -184,14 +185,11 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
                 <div className={cn('flex gap-2.5 mt-1', isMe && 'flex-row-reverse')}>
                   {/* Avatar — only for others, only when sender changes */}
                   {!isMe && (
-                    <div
-                      className={cn(
-                        'h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-semibold shrink-0 mt-0.5',
-                        !showSender && 'invisible',
-                      )}
-                    >
-                      {msg.sender.charAt(0)}
-                    </div>
+                    <Avatar
+                      name={msg.sender}
+                      size="sm"
+                      className={cn('mt-0.5', !showSender && 'invisible')}
+                    />
                   )}
 
                   <div className={cn('max-w-[72%] space-y-0.5', isMe && 'items-end flex flex-col')}>

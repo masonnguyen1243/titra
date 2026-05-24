@@ -242,7 +242,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 - [x] Loading skeleton component (used across all data-heavy pages)
 - [x] Empty state component (reusable with custom icon + message)
-- [ ] Avatar component (initials fallback if no photo)
+- [x] Avatar component (initials fallback if no photo)
 - [ ] Currency display component (formats integers as "150.000 ₫")
 - [ ] Status badge component (ACTIVE / SETTLED / ARCHIVED / PENDING / CONFIRMED)
 
