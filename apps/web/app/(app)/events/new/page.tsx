@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { ImagePlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { cn } from '@/lib/utils';
 
 type EventType = 'TRIP' | 'MEAL' | 'OTHER';
+
+const MAX_COVER_SIZE = 5 * 1024 * 1024; // 5 MB
 
 const EVENT_TYPES: { value: EventType; label: string; emoji: string }[] = [
   { value: 'TRIP', label: 'Chuyến đi', emoji: '✈️' },
@@ -22,17 +24,42 @@ export default function NewEventPage() {
   const [type, setType] = useState<EventType>('TRIP');
   const [description, setDescription] = useState('');
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverError, setCoverError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlRef = useRef<string | null>(null);
+
+  // Revoke object URL on unmount to avoid memory leak
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    };
+  }, []);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > MAX_COVER_SIZE) {
+      setCoverError('Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5 MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setCoverError(null);
+    // Revoke previous URL before creating a new one
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
     const url = URL.createObjectURL(file);
+    objectUrlRef.current = url;
     setCoverPreview(url);
   }
 
   function removeCover() {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
     setCoverPreview(null);
+    setCoverError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -139,10 +166,13 @@ export default function NewEventPage() {
                   <span className="text-sm">Chọn ảnh (JPG, PNG, tối đa 5 MB)</span>
                 </button>
               )}
+              {coverError && (
+                <p className="text-sm text-destructive">{coverError}</p>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/heic"
+                accept="image/jpeg,image/png"
                 className="hidden"
                 onChange={handleFileChange}
               />
