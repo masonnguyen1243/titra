@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { UserX } from 'lucide-react';
+import { Check, Copy, Link2, UserX } from 'lucide-react';
 
 type MemberRole = 'ORGANIZER' | 'MEMBER' | 'GUEST';
 
@@ -51,6 +51,11 @@ const DEFAULT_MEMBERS: EventMember[] = [
   { id: 'u1', name: 'Bạn', role: 'ORGANIZER' },
 ];
 
+const INVITE_TOKENS: Record<string, string> = {
+  '1': 'inv_1a2b3c4d5e6f',
+  '2': 'inv_9z8y7x6w5v4u',
+};
+
 const ROLE_LABELS: Record<MemberRole, string> = {
   ORGANIZER: 'Ban tổ chức',
   MEMBER: 'Thành viên',
@@ -67,12 +72,27 @@ export default function MembersPage({ params }: { params: Promise<{ id: string }
   const { id } = use(params);
   const [members, setMembers] = useState<EventMember[]>(MOCK_MEMBERS[id] ?? DEFAULT_MEMBERS);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState('');
+
+  useEffect(() => {
+    const token = INVITE_TOKENS[id] ?? 'inv_demo';
+    setInviteUrl(`${window.location.origin}/join/${token}`);
+  }, [id]);
 
   const currentUserId = CURRENT_USER_ID[id] ?? members[0]?.id;
   const currentMember = members.find((m) => m.id === currentUserId);
   const isOrganizer = currentMember?.role === 'ORGANIZER';
 
   const confirmTarget = members.find((m) => m.id === confirmId);
+
+  function handleCopy() {
+    if (!inviteUrl) return;
+    navigator.clipboard.writeText(inviteUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   function handleRemoveConfirmed() {
     if (!confirmId) return;
@@ -83,6 +103,26 @@ export default function MembersPage({ params }: { params: Promise<{ id: string }
   return (
     <>
       <div className="space-y-4">
+        <div className="rounded-lg border p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Link2 className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm font-medium">Link mời tham gia</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0 rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground font-mono truncate">
+              {inviteUrl || '…'}
+            </div>
+            <Button variant="outline" size="sm" onClick={handleCopy} className="shrink-0">
+              {copied ? (
+                <Check className="h-4 w-4 mr-1.5 text-green-600" />
+              ) : (
+                <Copy className="h-4 w-4 mr-1.5" />
+              )}
+              {copied ? 'Đã sao chép' : 'Sao chép'}
+            </Button>
+          </div>
+        </div>
+
         <p className="text-sm text-muted-foreground">{members.length} thành viên</p>
 
         <div className="divide-y rounded-lg border">

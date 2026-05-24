@@ -230,7 +230,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Record Settlement form (select payer, amount, method, upload proof)
 - [x] Chat tab: message list + text input
 - [x] Members tab: member list with role badge + Remove button (organizer only)
-- [ ] Invite link display with Copy button
+- [x] Invite link display with Copy button
 
 **Admin dashboard**
 

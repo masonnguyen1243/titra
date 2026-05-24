@@ -5,6 +5,13 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (22) — Phase 2: Invite link display with Copy button
+
+**Files changed:**
+- `apps/web/app/(app)/events/[id]/members/page.tsx`: added an invite link card above the member list. A `useEffect` sets `inviteUrl` to `window.location.origin + /join/<token>` after mount (avoiding SSR mismatch; shows `…` placeholder during hydration). Mock tokens keyed by event ID (`inv_1a2b3c4d5e6f` for event 1, `inv_9z8y7x6w5v4u` for event 2). Copy button calls `navigator.clipboard.writeText`; on success flips the icon to a green Check and label to "Đã sao chép" for 2 seconds, then resets.
+
+---
+
 ## 2026-05-24 (21) — Phase 2: Members tab
 
 **Files changed:**
