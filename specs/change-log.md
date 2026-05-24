@@ -5,6 +5,13 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (29) — Phase 2: Shared components — Currency display component
+
+**Files created:**
+- `apps/web/components/ui/currency.tsx`: `CurrencyDisplay` component. Props: `amount` (integer VND value), `className` (optional). Formats the integer using `toLocaleString('vi-VN')` (produces dot-separated thousands, e.g. "150.000") and appends " ₫". Always renders with `tabular-nums` so columns of amounts stay aligned.
+
+---
+
 ## 2026-05-24 (28b) — Review fix: Avatar component
 
 **Issues found and fixed in `apps/web/components/ui/avatar.tsx`:**
