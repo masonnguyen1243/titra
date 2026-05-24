@@ -1,6 +1,6 @@
 # Implementation Plan — Titra
 
-**Version:** 0.1
+**Version:** 0.2
 **Last updated:** 2026-05-24
 
 ---
@@ -10,14 +10,12 @@
 **Chosen: PostgreSQL + Prisma ORM**
 
 Rationale:
-- Financial data demands ACID transactions — PostgreSQL is the gold standard.
-- Prisma gives type-safe queries that align perfectly with TypeScript strict mode.
-- VND has no decimal places, so integer storage is sufficient and avoids floating-point errors.
-- PostgreSQL's JSONB is available if flexible metadata is ever needed.
-- Excellent ecosystem: PgBouncer for pooling, Neon/Supabase for managed hosting.
-- Alternatives considered: MySQL (weaker constraints), MongoDB (no ACID for financial writes), SQLite (not production-suitable for multi-user).
+- Financial data requires ACID transactions — PostgreSQL is the standard choice.
+- Prisma gives type-safe queries that align with TypeScript strict mode.
+- VND has no decimal places; integer storage avoids all floating-point errors.
+- Managed hosting: **Neon** (serverless Postgres, free tier, dev/prod branching).
 
-Managed hosting recommendation: **Neon** (serverless Postgres, generous free tier, branching support for dev/prod separation).
+Alternatives considered: MySQL (weaker constraints), MongoDB (no ACID for financial writes), SQLite (not suitable for multi-user production).
 
 ---
 
@@ -52,11 +50,11 @@ Managed hosting recommendation: **Neon** (serverless Postgres, generous free tie
 ```
 titra/
 ├── apps/
-│   ├── web/                    # Next.js 15 frontend
-│   │   ├── app/                # App Router pages
-│   │   │   ├── (auth)/         # Login, register, forgot-password
-│   │   │   ├── (app)/          # Authenticated app shell
-│   │   │   │   ├── dashboard/  # User home: list of events
+│   ├── web/                          # Next.js 15 frontend
+│   │   ├── app/
+│   │   │   ├── (auth)/               # login, register, forgot-password
+│   │   │   ├── (app)/                # authenticated shell
+│   │   │   │   ├── dashboard/        # event list
 │   │   │   │   ├── events/
 │   │   │   │   │   ├── new/
 │   │   │   │   │   └── [id]/
@@ -64,14 +62,13 @@ titra/
 │   │   │   │   │       ├── balances/
 │   │   │   │   │       ├── settlements/
 │   │   │   │   │       └── chat/
-│   │   │   │   └── admin/      # Admin dashboard (role-guarded)
+│   │   │   │   └── admin/
 │   │   ├── components/
-│   │   │   ├── ui/             # shadcn components (auto-generated)
-│   │   │   └── features/       # Domain-specific components
-│   │   ├── lib/                # API client, utils, hooks
-│   │   └── styles/
+│   │   │   ├── ui/                   # shadcn (auto-generated)
+│   │   │   └── features/             # domain components
+│   │   └── lib/                      # API client, hooks, utils
 │   │
-│   └── api/                    # NestJS backend
+│   └── api/                          # NestJS backend
 │       └── src/
 │           ├── auth/
 │           ├── users/
@@ -82,103 +79,16 @@ titra/
 │           ├── notifications/
 │           ├── export/
 │           ├── admin/
-│           └── prisma/         # Prisma service + schema
+│           └── prisma/
 │
 ├── packages/
-│   └── shared/                 # Zod schemas, shared types
+│   └── shared/                       # Zod schemas, shared types
 │
 ├── specs/
 ├── .env.example
 ├── pnpm-workspace.yaml
-├── turbo.json
-└── README.md
+└── turbo.json
 ```
-
----
-
-## Phase Plan
-
-### Phase 0 — Project Scaffolding
-**Goal:** Runnable skeleton, CI, and database connected.
-
-- [ ] Init pnpm monorepo + Turborepo
-- [ ] Scaffold Next.js 15 app with TailwindCSS + shadcn/ui
-- [ ] Scaffold NestJS app
-- [ ] Set up Prisma with PostgreSQL, write initial schema
-- [ ] Set up ESLint + Prettier + TypeScript strict across all packages
-- [ ] Configure `.env.example` with all required variables
-- [ ] GitHub Actions: lint + typecheck + test on PR
-
-### Phase 1 — Auth & User Management
-**Goal:** Users can register, log in, and manage their profile.
-
-- [ ] NestJS: AuthModule (register, login, refresh, logout)
-- [ ] NestJS: UsersModule (profile CRUD)
-- [ ] Prisma migration: User table
-- [ ] Next.js: Register page, Login page, Forgot Password page
-- [ ] Next.js: Auth state via NextAuth or custom JWT handling
-- [ ] Email verification flow (Resend)
-- [ ] Protected route middleware (frontend + backend)
-
-### Phase 2 — Events & Members
-**Goal:** Organizers can create events and invite members.
-
-- [ ] NestJS: EventsModule (CRUD, status transitions)
-- [ ] NestJS: EventMembersModule (invite link, join, remove)
-- [ ] Prisma migrations: Event, EventMember tables
-- [ ] Next.js: Dashboard (list events), Create Event form
-- [ ] Next.js: Event detail shell with tab navigation
-- [ ] Next.js: Invite link page `/join/[token]`
-- [ ] Next.js: Members management tab
-
-### Phase 3 — Expenses
-**Goal:** Members can log and split expenses.
-
-- [ ] NestJS: ExpensesModule (CRUD, split calculation)
-- [ ] Prisma migration: Expense, ExpenseSplit tables
-- [ ] Balance calculation service (debt simplification algorithm)
-- [ ] Next.js: Add Expense form (equal + custom split UI)
-- [ ] Next.js: Expense list page
-- [ ] Next.js: Balances tab (summary + transaction list)
-- [ ] File upload to Cloudinary (receipt photos)
-
-### Phase 4 — Settlements & Reminders
-**Goal:** Debts can be settled and members reminded.
-
-- [ ] NestJS: SettlementsModule (create, confirm)
-- [ ] Prisma migration: Settlement table
-- [ ] MoMo / VNPay deep-link generation
-- [ ] Next.js: Settlements tab (log payment, confirm payment)
-- [ ] NestJS: NotificationsModule (email reminders via Resend)
-- [ ] Next.js: Send reminder UI (organizer only)
-
-### Phase 5 — Chat & PDF Export
-**Goal:** Members can communicate and export a final report.
-
-- [ ] NestJS: MessagesModule + Socket.io gateway
-- [ ] Prisma migration: Message table
-- [ ] Next.js: Chat tab with real-time updates
-- [ ] NestJS: ExportModule (PDF generation via @react-pdf/renderer or Puppeteer)
-- [ ] Next.js: Export PDF button on event settings
-
-### Phase 6 — Admin Dashboard
-**Goal:** Admins can manage the system.
-
-- [ ] NestJS: AdminModule (user list, event list, metrics)
-- [ ] Role guard for ADMIN role
-- [ ] Next.js: Admin dashboard pages (users, events, stats)
-
-### Phase 7 — Polish & Launch
-**Goal:** Production-ready quality.
-
-- [ ] Responsive audit (375px → 1440px)
-- [ ] i18n setup for all UI strings (Vietnamese)
-- [ ] Error handling and loading states across all pages
-- [ ] Rate limiting on API (nestjs-throttler)
-- [ ] Helmet, CORS, CSP headers
-- [ ] Performance pass (image optimization, lazy loading)
-- [ ] End-to-end tests (Playwright)
-- [ ] Deploy: Vercel (web) + Railway/Fly.io (api) + Neon (db)
 
 ---
 
@@ -186,21 +96,21 @@ titra/
 
 ### Balance Calculation Algorithm
 Use the "minimum cash flow" algorithm:
-1. For each member, compute net balance = (sum paid) − (sum owed).
-2. Separate into creditors (positive) and debtors (negative).
-3. Greedily match the largest debtor with the largest creditor.
-4. Result: minimized number of transactions.
+1. Compute each member's net balance = (total paid) − (total owed).
+2. Split into creditors (positive) and debtors (negative).
+3. Greedily match the largest debtor with the largest creditor until all balances are zero.
+4. Result: minimum number of transactions needed to settle the group.
 
-This runs in O(n log n) and is sufficient for groups of ≤ 50 members.
+Runs in O(n log n); sufficient for groups up to 50 members.
 
 ### Split Rounding
-When splitting equally among n members, remainder VND goes to the first member in the list. This is deterministic and transparent.
+When splitting equally and the amount is not divisible by n, the remainder goes to the first member in the list. This is deterministic and shown transparently in the UI.
 
 ### Real-time Chat
-Use Socket.io with NestJS gateway. Fallback: 5-second polling for environments where WebSocket is blocked. No persistence of presence/typing indicators in MVP.
+Socket.io with NestJS gateway. Falls back to 5-second polling when WebSocket is blocked. No typing indicators or presence in MVP.
 
 ### PDF Generation
-Generate PDFs server-side using `@react-pdf/renderer` inside a NestJS service. Avoid Puppeteer in MVP to reduce container size and cold start time.
+Generated server-side with `@react-pdf/renderer` inside the NestJS export module. Puppeteer is avoided to keep the container small and cold starts fast.
 
 ---
 
@@ -228,37 +138,309 @@ CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 
-# App
+# App URLs
 NEXT_PUBLIC_API_URL=http://localhost:4000
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 ---
 
-## Dependency List (planned)
+## Phase Plan
 
-### apps/web
-- `next`, `react`, `react-dom`
-- `tailwindcss`, `@tailwindcss/forms`
-- `shadcn/ui` components (as needed)
-- `@tanstack/react-query`
-- `react-hook-form`, `zod`, `@hookform/resolvers`
-- `zustand`
-- `socket.io-client`
-- `next-auth` (or `jose` for manual JWT)
-- `lucide-react` (icons, included with shadcn)
+### Phase 1 — Project Setup
+**Goal:** Empty repo → fully runnable skeleton with linting, types, and DB connected.
 
-### apps/api
-- `@nestjs/core`, `@nestjs/common`, `@nestjs/platform-express`
-- `@nestjs/jwt`, `@nestjs/passport`, `passport-jwt`, `passport-local`
-- `@nestjs/websockets`, `@nestjs/platform-socket.io`
-- `@nestjs/throttler`
-- `@prisma/client`, `prisma`
-- `class-validator`, `class-transformer`
-- `resend`
-- `cloudinary`
-- `@react-pdf/renderer`
-- `helmet`, `compression`
+**Monorepo & tooling**
+- [ ] Init pnpm workspace + Turborepo
+- [ ] Configure `turbo.json` with `dev`, `build`, `lint`, `typecheck` pipelines
+- [ ] Add root `package.json` scripts that delegate to Turborepo
+- [ ] Set up ESLint + Prettier with shared config across all packages
+- [ ] Enable TypeScript strict mode in all `tsconfig.json` files
 
-### packages/shared
-- `zod`
+**Frontend skeleton**
+- [ ] Scaffold `apps/web` with Next.js 15 (App Router)
+- [ ] Install and configure TailwindCSS
+- [ ] Install shadcn/ui, add base components: Button, Input, Card, Dialog, Tabs, Toast
+- [ ] Create app shell layout with sidebar and header placeholder
+- [ ] Add route groups: `(auth)` and `(app)`
+
+**Backend skeleton**
+- [ ] Scaffold `apps/api` with NestJS
+- [ ] Configure global prefix `/api/v1`
+- [ ] Add `helmet`, `compression`, and CORS middleware
+- [ ] Add `nestjs-throttler` for rate limiting
+- [ ] Add health-check endpoint `GET /api/v1/health`
+
+**Database**
+- [ ] Add Prisma to `apps/api`, connect to PostgreSQL (Neon)
+- [ ] Write full initial schema: User, Event, EventMember, Expense, ExpenseSplit, Settlement, Message
+- [ ] Run first migration, confirm connection works
+
+**Shared package**
+- [ ] Scaffold `packages/shared` with Zod
+- [ ] Add base Zod schemas matching the DB schema (used later for validation)
+
+**Config & CI**
+- [ ] Create `.env.example` with all required variables
+- [ ] Add `.env` to `.gitignore`
+- [ ] Add GitHub Actions workflow: lint + typecheck + unit tests on every push
+
+---
+
+### Phase 2 — Core UI
+**Goal:** All screens built with static/hardcoded data. No real API calls yet. Focus on layout, navigation, and user experience.
+
+**Auth screens**
+- [ ] Login page (email + password form, Google OAuth button)
+- [ ] Register page (name, email, password)
+- [ ] Forgot password page (email input)
+- [ ] Email sent confirmation screen
+
+**Dashboard**
+- [ ] Event list page (cards showing event name, type, member count, status)
+- [ ] Empty state: "Bạn chưa có chuyến đi nào" with Create button
+- [ ] Create event form (name, type, description, cover photo upload)
+
+**Event detail**
+- [ ] Event shell with tab navigation: Expenses · Balances · Settlements · Chat · Members
+- [ ] Expenses tab: list of expenses with payer, amount, description, category chip
+- [ ] Add Expense form:
+  - [ ] Equal split mode (member checkboxes, per-person amount shown live)
+  - [ ] Custom split mode (amount input per member, running total shown)
+  - [ ] Receipt photo upload field
+- [ ] Balances tab: net position per member + simplified "X owes Y: Z ₫" list
+- [ ] Settlements tab: list of settlements with status badges (PENDING / CONFIRMED)
+- [ ] Record Settlement form (select payer, amount, method, upload proof)
+- [ ] Chat tab: message list + text input
+- [ ] Members tab: member list with role badge + Remove button (organizer only)
+- [ ] Invite link display with Copy button
+
+**Admin dashboard**
+- [ ] Stats cards: total users, total events, total VND tracked
+- [ ] User table: email, role, status, registered date, Deactivate button
+- [ ] Event table: name, organizer, status, member count, Archive button
+
+**Shared components**
+- [ ] Loading skeleton component (used across all data-heavy pages)
+- [ ] Empty state component (reusable with custom icon + message)
+- [ ] Avatar component (initials fallback if no photo)
+- [ ] Currency display component (formats integers as "150.000 ₫")
+- [ ] Status badge component (ACTIVE / SETTLED / ARCHIVED / PENDING / CONFIRMED)
+
+---
+
+### Phase 3 — Core Backend & Data Logic
+**Goal:** All API endpoints implemented and returning real data. Business logic unit-tested.
+
+**Auth module**
+- [ ] `POST /auth/register` — create user, hash password (bcrypt), queue verification email
+- [ ] `POST /auth/login` — validate credentials, return JWT pair in HttpOnly cookies
+- [ ] `POST /auth/refresh` — rotate refresh token, return new access token
+- [ ] `POST /auth/logout` — clear cookies
+- [ ] `POST /auth/verify-email` — verify token from email link
+- [ ] `POST /auth/forgot-password` — send reset link
+- [ ] `POST /auth/reset-password` — validate token, update password
+- [ ] JWT auth guard + role guard (ADMIN, ORGANIZER, MEMBER)
+
+**Users module**
+- [ ] `GET /users/me` — return current user profile
+- [ ] `PATCH /users/me` — update name and avatar
+
+**Events module**
+- [ ] `POST /events` — create event, auto-add organizer as ORGANIZER member
+- [ ] `GET /events` — list events the current user belongs to
+- [ ] `GET /events/:id` — get event detail (members-only access)
+- [ ] `PATCH /events/:id` — update event (organizer only)
+- [ ] `DELETE /events/:id` — soft delete / archive (organizer only)
+- [ ] `GET /events/:id/invite` — return invite link token
+- [ ] `POST /events/:id/join` — join event via token (auto-register guest account if new)
+- [ ] `POST /events/:id/members` — add member by email or guest by name (organizer only)
+- [ ] `DELETE /events/:id/members/:memberId` — remove member (organizer only)
+
+**Expenses module**
+- [ ] `POST /events/:id/expenses` — create expense + splits (equal or custom)
+- [ ] `GET /events/:id/expenses` — list all non-deleted expenses
+- [ ] `PATCH /events/:id/expenses/:expenseId` — edit expense (creator or organizer)
+- [ ] `DELETE /events/:id/expenses/:expenseId` — soft delete (creator or organizer)
+- [ ] `GET /events/:id/balances` — run debt simplification algorithm, return results
+- [ ] Balance calculation service (unit tested independently)
+- [ ] Cloudinary upload service (receipt photos)
+
+**Settlements module**
+- [ ] `POST /events/:id/settlements` — record settlement (status: PENDING)
+- [ ] `GET /events/:id/settlements` — list all settlements
+- [ ] `PATCH /events/:id/settlements/:settlementId/confirm` — confirm (recipient or organizer)
+- [ ] `DELETE /events/:id/settlements/:settlementId` — reject / delete PENDING settlement
+- [ ] MoMo deep-link generator utility
+- [ ] VNPay deep-link generator utility
+
+**Notifications module**
+- [ ] `POST /events/:id/reminders` — send email reminder to a debtor (organizer only)
+- [ ] Rate-limit check: reject if reminder sent in last 24h for this member
+- [ ] Resend email service (reminder template + PDF download link)
+
+**Messages module**
+- [ ] `GET /events/:id/messages` — fetch message history (paginated)
+- [ ] `POST /events/:id/messages` — post a message (REST fallback)
+- [ ] Socket.io gateway: `joinRoom`, `leaveRoom`, `sendMessage`, `newMessage` events
+
+**Export module**
+- [ ] `POST /events/:id/export/pdf` — generate PDF report, upload to Cloudinary, return URL
+- [ ] PDF content: event summary, expense list, balance table, settlement history
+
+**Admin module**
+- [ ] `GET /admin/users` — paginated user list
+- [ ] `PATCH /admin/users/:id` — activate / deactivate user
+- [ ] `GET /admin/events` — paginated event list
+- [ ] `PATCH /admin/events/:id/archive` — force archive event
+- [ ] `GET /admin/stats` — total users, events, VND tracked
+
+---
+
+### Phase 4 — Connect UI to Data
+**Goal:** Replace all static data in the UI with live API calls.
+
+**API client setup**
+- [ ] Create typed fetch wrapper in `apps/web/lib/api.ts` (attaches JWT, handles 401 refresh)
+- [ ] Configure TanStack Query provider in the app root
+- [ ] Define typed query/mutation hooks per domain in `apps/web/lib/hooks/`
+
+**Auth**
+- [ ] Wire login form → `POST /auth/login` → redirect to dashboard on success
+- [ ] Wire register form → `POST /auth/register` → show "check your email" screen
+- [ ] Wire forgot password form → `POST /auth/forgot-password`
+- [ ] Protect `(app)` routes: redirect to `/login` if no valid session
+- [ ] Protect `/admin` routes: redirect to `/dashboard` if not Admin
+
+**Dashboard & events**
+- [ ] Dashboard fetches and renders real event list
+- [ ] Create Event form submits → redirects to new event detail page
+- [ ] Event detail fetches event data and member list
+
+**Expenses**
+- [ ] Expense list fetches real expenses for the event
+- [ ] Add Expense form submits with correct split payload
+- [ ] Edit and delete actions wired up with optimistic UI updates
+- [ ] Receipt photo: upload to Cloudinary via signed URL before form submit
+
+**Balances**
+- [ ] Balance tab fetches `/balances` endpoint and renders simplified transaction list
+- [ ] Live recalculates after any expense create/edit/delete
+
+**Settlements**
+- [ ] Settlement list fetches real data with status badges
+- [ ] Record Settlement form submits and shows PENDING entry immediately
+- [ ] Confirm and reject buttons wired to API; balance view updates after confirm
+
+**Reminders**
+- [ ] Send Reminder button (organizer only) calls notifications API
+- [ ] Shows "last reminded at …" from API response
+- [ ] Disables button with countdown if within 24h rate limit window
+
+**Chat**
+- [ ] On mount, connect to Socket.io room for the event
+- [ ] Fetch message history via REST on load
+- [ ] Send message over WebSocket; append to list on `newMessage` event
+- [ ] Fall back to polling if WebSocket connection fails
+
+**PDF export**
+- [ ] Export button calls `/export/pdf`, shows loading state, then download link
+
+**Admin**
+- [ ] Admin dashboard fetches stats, user list, and event list
+- [ ] Deactivate/activate and archive actions wired to admin endpoints
+
+---
+
+### Phase 5 — Validation and Error States
+**Goal:** Every form and every page handles bad input and failures gracefully.
+
+**Form validation (React Hook Form + Zod)**
+- [ ] Login: required fields, valid email format
+- [ ] Register: required fields, valid email, password min 8 chars, passwords match
+- [ ] Create Event: name required, type required
+- [ ] Add Expense: amount > 0 required, description required, custom split must sum to total
+- [ ] Record Settlement: amount > 0, method required
+- [ ] Chat input: non-empty message
+
+**API error handling**
+- [ ] 400 Bad Request → show field-level error messages in Vietnamese
+- [ ] 401 Unauthorized → clear session, redirect to login
+- [ ] 403 Forbidden → show "Bạn không có quyền thực hiện thao tác này"
+- [ ] 404 Not Found → show inline "Không tìm thấy" message (not a full-page redirect)
+- [ ] 429 Too Many Requests (reminder rate limit) → show time remaining in Vietnamese
+- [ ] 500 Server Error → show generic error toast with retry option
+- [ ] Network offline → show "Mất kết nối, đang thử lại…" banner
+
+**Loading states**
+- [ ] Skeleton loaders on: dashboard event list, expense list, balance view, settlement list, chat history, admin tables
+- [ ] Spinner on all form submit buttons while request is in flight
+- [ ] Disable submit button after click to prevent double-submit
+
+**Empty states**
+- [ ] Dashboard: no events yet
+- [ ] Expense list: no expenses logged
+- [ ] Balance view: everyone is settled (zero balances)
+- [ ] Settlement list: no settlements recorded
+- [ ] Chat: no messages yet
+- [ ] Admin user/event tables: no results
+
+**Edge cases**
+- [ ] Invite link: expired or invalid token → show friendly error and link to register
+- [ ] Custom split: real-time sum display turns red when it doesn't match the total
+- [ ] Receipt upload: file too large (> 5 MB) or wrong type → show error before upload
+- [ ] Removing a member who has expenses → confirm dialog explaining their history is kept
+
+---
+
+### Phase 6 — Local Run Instructions
+**Goal:** Any developer (or the user demoing) can get the full stack running locally in under 10 minutes.
+
+- [ ] Document prerequisites in `README.md`:
+  - Node.js ≥ 20
+  - pnpm ≥ 9
+  - Docker (for local Postgres) OR a free Neon account
+- [ ] Step-by-step setup in `README.md`:
+  1. `git clone` the repo
+  2. `pnpm install` at repo root
+  3. Copy `.env.example` → `.env`, fill in required variables (list the minimum required ones for local dev)
+  4. `pnpm db:migrate` — run Prisma migrations
+  5. `pnpm db:seed` — seed one demo event with expenses
+  6. `pnpm dev` — starts both `apps/web` (port 3000) and `apps/api` (port 4000) in parallel
+- [ ] Document how to reset the database: `pnpm db:reset`
+- [ ] Add `apps/api/prisma/seed.ts` that creates:
+  - 1 admin user (`admin@titra.local` / `password123`)
+  - 2 regular users
+  - 1 event with 5 expenses and 1 settlement
+- [ ] Document common errors and fixes:
+  - `DATABASE_URL` not set → what error looks like and where to get a Neon URL
+  - Port already in use → how to change the port
+  - Prisma client not generated → run `pnpm prisma generate`
+
+---
+
+### Phase 7 — ngrok Demo Setup
+**Goal:** Share a working live demo from localhost with anyone via a public URL.
+
+- [ ] Add ngrok setup instructions to `README.md` under a "Demo / Sharing" section:
+  1. Install ngrok: `brew install ngrok` (Mac) or download from ngrok.com
+  2. Create a free ngrok account and add your auth token: `ngrok config add-authtoken <token>`
+  3. Expose the API: `ngrok http 4000` → copy the HTTPS URL (e.g. `https://abc123.ngrok-free.app`)
+  4. Expose the web app: open a second terminal, `ngrok http 3000` → copy that HTTPS URL
+  5. Update `.env` on the demo machine:
+     ```
+     NEXT_PUBLIC_API_URL=https://abc123.ngrok-free.app
+     NEXT_PUBLIC_APP_URL=https://xyz789.ngrok-free.app
+     NEXTAUTH_URL=https://xyz789.ngrok-free.app
+     ```
+  6. Restart `pnpm dev`
+- [ ] Configure NestJS CORS to accept the ngrok domain dynamically (read from env, not hardcoded)
+- [ ] Test the full invite link flow over the public URL (critical: link must use the public domain)
+- [ ] Document the demo script — what to show and in what order:
+  1. Register as organizer → create "Đà Lạt weekend" event
+  2. Copy invite link → open in incognito → join as a second member
+  3. Log 3 expenses with different payers and splits
+  4. Show the Balances tab (simplified debts)
+  5. Record a settlement → confirm it → show balance update
+  6. Send a reminder email
+  7. Export PDF
