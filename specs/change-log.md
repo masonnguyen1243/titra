@@ -5,6 +5,29 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (35b) — Review fix: POST /auth/verify-email
+
+**Issue found and fixed:**
+- **Missing test for null `verificationTokenExpiry`** — the `!user.verificationTokenExpiry` branch in `verifyEmail()` (handles users created without an expiry, e.g. via direct DB insert) had no test. Added case "throws 400 when verificationTokenExpiry is null" to `auth.service.spec.ts`.
+
+All 17 auth service tests pass.
+
+---
+
+## 2026-05-24 (35) — Phase 3: Auth module — POST /auth/verify-email
+
+**Files changed:**
+- `apps/api/src/auth/auth.service.ts`: Added `verifyEmail(token)` — looks up user by `verificationToken` (unique index); throws 400 if not found; returns `{ ok: true }` immediately if already verified (idempotent); throws 400 if `verificationTokenExpiry` is in the past; otherwise sets `emailVerified = true` and nulls out both token fields.
+- `apps/api/src/auth/auth.controller.ts`: Added `POST /auth/verify-email` route using `@Body() VerifyEmailDto`.
+- `apps/api/src/auth/dto/verify-email.dto.ts` *(new)*: `VerifyEmailDto` with a single `token` field (`@IsString @IsNotEmpty`).
+- `apps/api/src/auth/auth.service.spec.ts`: Added `verifyEmail` describe block with 4 cases: valid token → user updated; already verified → returns ok without update; unknown token → 400; expired token → 400. Also added `update: jest.fn()` to `mockPrisma.user`.
+
+All 16 auth service tests pass.
+
+**Also:** Ran `npx prisma generate` to regenerate the Prisma client — `verificationToken` and `verificationTokenExpiry` fields were in `schema.prisma` but the generated client was stale.
+
+---
+
 ## 2026-05-24 (34b) — Review fix: POST /auth/logout
 
 **Issues found and fixed:**

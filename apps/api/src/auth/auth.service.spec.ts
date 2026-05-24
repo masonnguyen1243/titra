@@ -1,4 +1,4 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
@@ -24,6 +24,7 @@ const mockPrisma = {
   user: {
     findUnique: jest.fn(),
     create: jest.fn(),
+    update: jest.fn(),
   },
 };
 
@@ -187,6 +188,67 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
 
       expect(res.cookie).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('verifyEmail', () => {
+    const futureExpiry = new Date(Date.now() + 60 * 60 * 1000);
+    const pastExpiry = new Date(Date.now() - 60 * 60 * 1000);
+
+    it('marks emailVerified and clears token fields for a valid token', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-1',
+        emailVerified: false,
+        verificationTokenExpiry: futureExpiry,
+      });
+      mockPrisma.user.update.mockResolvedValue({});
+
+      const result = await service.verifyEmail('valid-token');
+
+      expect(result).toEqual({ ok: true });
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'uuid-1' },
+        data: { emailVerified: true, verificationToken: null, verificationTokenExpiry: null },
+      });
+    });
+
+    it('returns { ok: true } immediately if email is already verified', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-1',
+        emailVerified: true,
+        verificationTokenExpiry: futureExpiry,
+      });
+
+      const result = await service.verifyEmail('already-verified-token');
+
+      expect(result).toEqual({ ok: true });
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('throws 400 BadRequestException for an unknown token', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.verifyEmail('unknown-token')).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws 400 BadRequestException for an expired token', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-1',
+        emailVerified: false,
+        verificationTokenExpiry: pastExpiry,
+      });
+
+      await expect(service.verifyEmail('expired-token')).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws 400 BadRequestException when verificationTokenExpiry is null', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-1',
+        emailVerified: false,
+        verificationTokenExpiry: null,
+      });
+
+      await expect(service.verifyEmail('no-expiry-token')).rejects.toThrow(BadRequestException);
     });
   });
 

@@ -258,7 +258,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] `POST /auth/login` — validate credentials, return JWT pair in HttpOnly cookies
 - [x] `POST /auth/refresh` — rotate refresh token, return new access token
 - [x] `POST /auth/logout` — clear cookies
-- [ ] `POST /auth/verify-email` — verify token from email link
+- [x] `POST /auth/verify-email` — verify token from email link
 - [ ] `POST /auth/forgot-password` — send reset link
 - [ ] `POST /auth/reset-password` — validate token, update password
 - [ ] JWT auth guard + role guard (ADMIN, ORGANIZER, MEMBER)

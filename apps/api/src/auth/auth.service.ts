@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -130,6 +131,36 @@ export class AuthService {
     return { ok: true };
   }
 
+  async verifyEmail(token: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { verificationToken: token },
+      select: { id: true, emailVerified: true, verificationTokenExpiry: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Liên kết xác nhận không hợp lệ');
+    }
+
+    if (user.emailVerified) {
+      return { ok: true };
+    }
+
+    if (!user.verificationTokenExpiry || user.verificationTokenExpiry < new Date()) {
+      throw new BadRequestException('Liên kết xác nhận đã hết hạn');
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        verificationToken: null,
+        verificationTokenExpiry: null,
+      },
+    });
+
+    return { ok: true };
+  }
+
   logout(res: Response) {
     const cookieBase = {
       httpOnly: true,
@@ -212,7 +243,7 @@ export class AuthService {
       const { Resend } = await import('resend');
       const resend = new Resend(resendApiKey);
       await resend.emails.send({
-        from: 'Titra <no-reply@titra.app>',
+        from: process.env['EMAIL_FROM'] ?? 'onboarding@resend.dev',
         to: email,
         subject: 'Xác nhận email của bạn — Titra',
         html: `
