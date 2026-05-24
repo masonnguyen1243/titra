@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 
 type UserRole = 'ADMIN' | 'USER';
 type UserStatus = 'ACTIVE' | 'INACTIVE';
+type EventStatus = 'ACTIVE' | 'SETTLED' | 'ARCHIVED';
 
 interface AdminUser {
   id: string;
@@ -16,6 +17,14 @@ interface AdminUser {
   role: UserRole;
   status: UserStatus;
   registeredAt: string;
+}
+
+interface AdminEvent {
+  id: string;
+  name: string;
+  organizerName: string;
+  status: EventStatus;
+  memberCount: number;
 }
 
 interface StatCard {
@@ -55,6 +64,26 @@ const MOCK_USERS: AdminUser[] = [
   { id: 'u6', name: 'Đặng Văn Dũng', email: 'dung@example.com', role: 'USER', status: 'ACTIVE', registeredAt: '2026-04-18' },
 ];
 
+const MOCK_EVENTS: AdminEvent[] = [
+  { id: 'e1', name: 'Đà Lạt Weekend', organizerName: 'Nguyễn Minh Anh', status: 'ACTIVE', memberCount: 6 },
+  { id: 'e2', name: 'Tất niên 2025', organizerName: 'Võ Thị Lan', status: 'SETTLED', memberCount: 12 },
+  { id: 'e3', name: 'Phú Quốc hè 2026', organizerName: 'Trần Văn Hùng', status: 'ACTIVE', memberCount: 8 },
+  { id: 'e4', name: 'Sinh nhật Minh', organizerName: 'Phạm Thị Linh', status: 'ARCHIVED', memberCount: 5 },
+  { id: 'e5', name: 'Team building Q1', organizerName: 'Đặng Văn Dũng', status: 'ACTIVE', memberCount: 20 },
+];
+
+const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
+  ACTIVE: 'Đang diễn ra',
+  SETTLED: 'Đã huề',
+  ARCHIVED: 'Đã lưu trữ',
+};
+
+const EVENT_STATUS_VARIANTS: Record<EventStatus, 'success' | 'outline' | 'secondary'> = {
+  ACTIVE: 'success',
+  SETTLED: 'outline',
+  ARCHIVED: 'secondary',
+};
+
 function formatDate(iso: string) {
   const [y, m, d] = iso.split('-');
   return `${d}/${m}/${y}`;
@@ -62,12 +91,19 @@ function formatDate(iso: string) {
 
 export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>(MOCK_USERS);
+  const [events, setEvents] = useState<AdminEvent[]>(MOCK_EVENTS);
 
   function toggleStatus(id: string) {
     setUsers((prev) =>
       prev.map((u) =>
         u.id === id ? { ...u, status: u.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' } : u,
       ),
+    );
+  }
+
+  function archiveEvent(id: string) {
+    setEvents((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, status: 'ARCHIVED' as EventStatus } : e)),
     );
   }
 
@@ -150,6 +186,55 @@ export default function AdminPage() {
                         }
                       >
                         {user.status === 'ACTIVE' ? 'Vô hiệu hoá' : 'Kích hoạt'}
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Sự kiện</h2>
+          <span className="text-sm text-muted-foreground">{events.length} sự kiện</span>
+        </div>
+
+        <div className="rounded-lg border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tên sự kiện</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Trạng thái</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Thành viên</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {events.map((event) => (
+                <tr key={event.id} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3">
+                    <p className="font-medium">{event.name}</p>
+                    <p className="text-xs text-muted-foreground">Ban tổ chức: {event.organizerName}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge variant={EVENT_STATUS_VARIANTS[event.status]}>
+                      {EVENT_STATUS_LABELS[event.status]}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                    {event.memberCount} người
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {event.status !== 'ARCHIVED' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => archiveEvent(event.id)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        Lưu trữ
                       </Button>
                     )}
                   </td>

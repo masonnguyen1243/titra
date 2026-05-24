@@ -236,7 +236,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 - [x] Stats cards: total users, total events, total VND tracked
 - [x] User table: email, role, status, registered date, Deactivate button
-- [ ] Event table: name, organizer, status, member count, Archive button
+- [x] Event table: name, organizer, status, member count, Archive button
 
 **Shared components**
 

@@ -5,6 +5,13 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (25) — Phase 2: Admin dashboard — Event table
+
+**Files changed:**
+- `apps/web/app/(app)/admin/page.tsx`: added **Sự kiện** section below the user table. Table columns: event name + organizer (stacked), status badge (**Đang diễn ra** green / **Đã huề** outline / **Đã lưu trữ** secondary), member count, and an **"Lưu trữ"** action button. Archive button is hidden on already-ARCHIVED rows; clicking it sets the event's status to `ARCHIVED` in local state. Mock seed: 5 events (3 ACTIVE, 1 SETTLED, 1 pre-ARCHIVED).
+
+---
+
 ## 2026-05-24 (24) — Phase 2: Admin dashboard — User table
 
 **Files changed:**
