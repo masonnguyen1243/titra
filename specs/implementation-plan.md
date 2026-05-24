@@ -208,8 +208,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 - [x] Login page (email + password form, Google OAuth button)
 - [x] Register page (name, email, password)
-- [ ] Forgot password page (email input)
-- [ ] Email sent confirmation screen
+- [x] Forgot password page (email input)
+- [x] Email sent confirmation screen
 
 **Dashboard**
 

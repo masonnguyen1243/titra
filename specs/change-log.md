@@ -5,6 +5,20 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-24 (8) — Phase 2: Email sent confirmation screen
+
+**Files changed:**
+- `apps/web/app/(auth)/check-email/page.tsx`: created static email confirmation screen — envelope icon, "Kiểm tra email của bạn" heading, description prompting user to check inbox/spam, 15-minute expiry notice, "Gửi lại email" button linking back to forgot-password, link to login. Server component (no interactivity needed). Matches the auth layout pattern.
+
+---
+
+## 2026-05-24 (7) — Phase 2: Forgot password page
+
+**Files changed:**
+- `apps/web/app/(auth)/forgot-password/page.tsx`: created forgot password page — email input field, "Gửi liên kết đặt lại mật khẩu" submit button, link back to login. Client component matching the login/register pattern. No API calls yet.
+
+---
+
 ## 2026-05-24 (6) — Phase 2: Register page
 
 **Files changed:**
