@@ -61,6 +61,30 @@ export class EventsService {
     return event;
   }
 
+  async getInvite(eventId: string, userId: string) {
+    const event = await this.prisma.event.findFirst({
+      where: { id: eventId, deletedAt: null },
+      select: {
+        inviteToken: true,
+        members: { where: { userId }, select: { id: true } },
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Sự kiện không tồn tại');
+    }
+
+    if (event.members.length === 0) {
+      throw new ForbiddenException('Bạn không phải thành viên của sự kiện này');
+    }
+
+    const appUrl = process.env['NEXT_PUBLIC_APP_URL'] ?? 'http://localhost:3000';
+    return {
+      inviteToken: event.inviteToken,
+      inviteUrl: `${appUrl}/join/${event.inviteToken}`,
+    };
+  }
+
   async updateEvent(eventId: string, userId: string, dto: UpdateEventDto) {
     const event = await this.prisma.event.findFirst({
       where: { id: eventId, deletedAt: null },

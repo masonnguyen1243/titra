@@ -21,6 +21,12 @@ export class EventsController {
     return this.eventsService.getEventDetail(id, user.sub);
   }
 
+  @Get(':id/invite')
+  @HttpCode(HttpStatus.OK)
+  getInvite(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.eventsService.getInvite(id, user.sub);
+  }
+
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
   updateEvent(

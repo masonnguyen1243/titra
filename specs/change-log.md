@@ -5,6 +5,14 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (58) — Phase 3: Events module — GET /events/:id/invite
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`: Added `getInvite(eventId, userId)` — fetches `inviteToken` and checks if the caller has a member row in the event in a single query (404 if not found/deleted; 403 if caller is not a member). Returns `{ inviteToken, inviteUrl }` where `inviteUrl` is constructed from `NEXT_PUBLIC_APP_URL` env var (falls back to `http://localhost:3000`).
+- `apps/api/src/events/events.controller.ts`: Added `GET /events/:id/invite` handler returning 200. Placed before `GET /events/:id` in the route list to prevent `:id` from swallowing the `invite` segment.
+
+---
+
 ## 2026-05-25 (57) — Phase 3: Events module — DELETE /events/:id
 
 **Files changed:**

@@ -299,7 +299,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] `GET /events/:id` — get event detail (members-only access)
 - [x] `PATCH /events/:id` — update event (organizer only)
 - [x] `DELETE /events/:id` — soft delete / archive (organizer only)
-- [ ] `GET /events/:id/invite` — return invite link token
+- [x] `GET /events/:id/invite` — return invite link token
 - [ ] `POST /events/:id/join` — join event via token (auto-register guest account if new)
 - [ ] `POST /events/:id/members` — add member by email or guest by name (organizer only)
 - [ ] `DELETE /events/:id/members/:memberId` — remove member (organizer only)
