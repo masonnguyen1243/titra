@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
@@ -7,6 +7,8 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
+import { GoogleProfile } from './strategies/google.strategy';
 
 @Public()
 @Controller('auth')
@@ -53,6 +55,27 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
+  }
+
+  @Get('google')
+  @UseGuards(GoogleAuthGuard)
+  googleRedirect() {
+    // Passport redirects to Google — no body needed
+  }
+
+  @Get('google/callback')
+  @UseGuards(GoogleAuthGuard)
+  async googleCallback(
+    @Req() req: Request & { user: GoogleProfile },
+    @Res() res: Response,
+  ) {
+    const appUrl = process.env['NEXT_PUBLIC_APP_URL'] ?? 'http://localhost:3000';
+    try {
+      await this.authService.googleLogin(req.user, res);
+      res.redirect(`${appUrl}/dashboard`);
+    } catch {
+      res.redirect(`${appUrl}/login?error=oauth_failed`);
+    }
   }
 
   @Get('health')

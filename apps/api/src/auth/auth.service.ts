@@ -14,6 +14,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { GoogleProfile } from './strategies/google.strategy';
 
 const BCRYPT_ROUNDS = 12;
 const VERIFICATION_TOKEN_TTL_HOURS = 24;
@@ -217,6 +218,55 @@ export class AuthService {
     await this.sendPasswordResetEmail(user.email, user.name, resetToken);
 
     return { ok: true };
+  }
+
+  async googleLogin(profile: GoogleProfile, res: Response) {
+    let user = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ googleId: profile.googleId }, { email: profile.email }],
+      },
+      select: { id: true, name: true, email: true, role: true, isActive: true, googleId: true },
+    });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          email: profile.email,
+          name: profile.name,
+          avatarUrl: profile.avatarUrl,
+          googleId: profile.googleId,
+          emailVerified: true,
+        },
+        select: { id: true, name: true, email: true, role: true, isActive: true, googleId: true },
+      });
+    } else if (!user.googleId) {
+      // Link Google account to existing email-based account
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { googleId: profile.googleId, emailVerified: true },
+        select: { id: true, name: true, email: true, role: true, isActive: true, googleId: true },
+      });
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Tài khoản đã bị vô hiệu hóa');
+    }
+
+    const payload = { sub: user.id, email: user.email, role: user.role };
+
+    const accessToken = this.jwtService.sign(payload, {
+      secret: process.env['JWT_SECRET'],
+      expiresIn: ACCESS_TOKEN_TTL,
+    });
+
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: process.env['JWT_REFRESH_SECRET'],
+      expiresIn: REFRESH_TOKEN_TTL,
+    });
+
+    this.setTokenCookies(res, accessToken, refreshToken);
+
+    return { id: user.id, name: user.name, email: user.email, role: user.role };
   }
 
   async health() {

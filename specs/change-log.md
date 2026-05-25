@@ -5,6 +5,20 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (46) — Phase 3: Auth — Google OAuth login via Passport (M1)
+
+**Files changed:**
+- `apps/api/prisma/schema.prisma`: Added `googleId String? @unique` to the `User` model.
+- `apps/api/prisma/migrations/20260525_add_google_id_to_users/migration.sql`: Migration SQL for the new column and unique index.
+- `apps/api/src/auth/strategies/google.strategy.ts`: New `GoogleStrategy` extending `PassportStrategy(Strategy, 'google')`. Reads `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `NEXT_PUBLIC_API_URL` from env. Extracts `googleId`, `email`, `name`, and `avatarUrl` from the Google profile and passes them as a typed `GoogleProfile` object.
+- `apps/api/src/auth/guards/google-auth.guard.ts`: New `GoogleAuthGuard` extending `AuthGuard('google')`.
+- `apps/api/src/auth/auth.service.ts`: Added `googleLogin(profile, res)`. Looks up user by `googleId` OR `email` (handles account linking). Creates a new user if none exists (`emailVerified: true` since Google already verified it). Updates existing email-only account to set `googleId`. Rejects inactive accounts. Issues JWT pair via HttpOnly cookies and returns the user profile.
+- `apps/api/src/auth/auth.controller.ts`: Added `GET /auth/google` (redirect to Google) and `GET /auth/google/callback` (receives profile, calls `googleLogin`, redirects to `/dashboard` on success or `/login?error=oauth_failed` on failure).
+- `apps/api/src/auth/auth.module.ts`: Imported `PassportModule` and registered `GoogleStrategy` as a provider.
+- `apps/api/package.json`: Added `@nestjs/passport`, `passport`, `passport-google-oauth20` (runtime) and `@types/passport`, `@types/passport-google-oauth20` (dev).
+
+---
+
 ## 2026-05-25 (45) — Phase 3: Auth QA fix — RegisterDto rejects empty name (M7)
 
 **Files changed:**
