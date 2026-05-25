@@ -30,6 +30,11 @@ enum MemberRole {
   MEMBER
 }
 
+enum MemberStatus {
+  PENDING
+  ACTIVE
+}
+
 enum SplitType {
   EQUAL
   CUSTOM
@@ -116,12 +121,16 @@ model Event {
 }
 
 model EventMember {
-  id       String     @id @default(uuid())
-  eventId  String
-  userId   String?
-  nickname String
-  role     MemberRole @default(MEMBER)
-  joinedAt DateTime   @default(now())
+  id                String       @id @default(uuid())
+  eventId           String
+  userId            String?
+  nickname          String
+  role              MemberRole   @default(MEMBER)
+  status            MemberStatus @default(ACTIVE)
+  inviteToken       String?      @unique
+  inviteTokenExpiry DateTime?
+  joinedAt          DateTime     @default(now())
+  removedAt         DateTime?
 
   event               Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user                User?          @relation(fields: [userId], references: [id], onDelete: SetNull)

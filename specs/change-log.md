@@ -5,6 +5,69 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (67) — Phase 3: Events module security fix — addMember enumeration-safe for unknown email (S3)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - `addMember` (email path): replaced `throw new NotFoundException(…)` when `target` is null with a silent `return { ok: true }`. The caller (organizer) receives a 201 response in both cases — found-and-invited and not-found — so the HTTP status code cannot be used to enumerate which emails have registered accounts. Pattern matches `forgotPassword()` which already uses the same enumeration-safe approach.
+
+---
+
+## 2026-05-25 (66) — Phase 3: Events module QA fix — joinEvent blocks SETTLED events (F4)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - `joinEvent`: expanded the status guard from `ARCHIVED`-only to `ARCHIVED || SETTLED`. Error message updated to the generic "Sự kiện đã kết thúc, không thể tham gia" (covers both terminal states). Previously a user could join a fully-settled event via invite link, which would corrupt balances by introducing a new member with zero history after settlement was calculated.
+
+---
+
+## 2026-05-25 (65) — Phase 3: Events module QA fix — addMember validates isActive & emailVerified (F3)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - `addMember` (email path): expanded `user.findUnique` select to include `isActive` and `emailVerified`; throws `400 BadRequestException` ("Tài khoản người dùng này đã bị vô hiệu hoá") if `isActive` is false; throws `400 BadRequestException` ("Người dùng này chưa xác minh email…") if `emailVerified` is false. Both checks run after the 404 guard and before the existing-membership check, so deactivated/unverified users cannot be added even via re-invite.
+
+---
+
+## 2026-05-25 (64) — Phase 3: Events module QA fix — addMember invite accept flow (F5)
+
+**Files changed:**
+- `apps/api/prisma/schema.prisma` — thêm enum `MemberStatus { PENDING ACTIVE }` và 3 field vào `EventMember`: `status MemberStatus @default(ACTIVE)`, `inviteToken String? @unique`, `inviteTokenExpiry DateTime?`
+- `apps/api/prisma/migrations/20260525_add_member_status_and_invite_token/migration.sql` — tạo enum + alter table + unique index
+- `apps/api/src/events/events.service.ts`:
+  - `addMember` (email path): tạo member với `status: PENDING` + generate `inviteToken` (UUID) và `inviteTokenExpiry` (48h); email chứa link accept thay vì link event trực tiếp; re-invite member bị remove hoặc PENDING cũng reset token
+  - `acceptInvitation`: method mới — tìm member theo `inviteToken`, kiểm tra ownership + expiry, cập nhật `status → ACTIVE`, xóa token
+  - `getEvents`: filter `status: ACTIVE` khi kiểm tra membership → PENDING member không thấy event trong dashboard
+  - `getEventDetail`: filter `status: ACTIVE` trong danh sách member + access check
+  - `getInvite`: filter `status: ACTIVE`
+  - `joinEvent`: filter `status: ACTIVE` khi check existing membership
+- `apps/api/src/events/events.controller.ts` — thêm `POST /events/:id/invitations/:token/accept`
+
+---
+
+## 2026-05-25 (63) — Phase 3: Events module QA fix — addMember invite email (F2)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - Added `escapeHtml` helper and `Logger` (matching auth service pattern)
+  - `addMember` (email path): expanded event query to also fetch `name` and `inviteToken`; fetched organizer name in parallel via `Promise.all`; after creating/restoring the EventMember, fires `sendEventInviteEmail` as a non-blocking background call (`void`)
+  - Added `sendEventInviteEmail` private method: sends an HTML email via Resend notifying the user which organizer added them and linking to the event; falls back to `logger.log` in dev when `RESEND_API_KEY` is absent
+
+---
+
+## 2026-05-25 (62) — Phase 3: Events module QA fix — removeMember soft-delete (F1)
+
+**Files changed:**
+- `apps/api/prisma/schema.prisma` — added `removedAt DateTime?` field to `EventMember`
+- `apps/api/prisma/migrations/20260525_add_removed_at_to_event_members/migration.sql` — new migration
+- `apps/api/src/events/events.service.ts`:
+  - `removeMember`: removed 409 financial-history block; now soft-deletes by setting `removedAt = now()` instead of hard-deleting — preserves all expense/settlement history per spec §5.2
+  - `getEventDetail`: member list filtered to `removedAt: null`; active-membership check via join query updated accordingly
+  - `joinEvent`: active-membership check filters `removedAt: null`; removed members who rejoin via invite link have their row restored (removedAt reset) rather than a new row created
+  - `addMember` (email path): checks `removedAt` before throwing 409; restores previously removed members instead of erroring
+
+---
+
 ## 2026-05-25 (61) — Phase 3: Events module — DELETE /events/:id/members/:memberId
 
 **Files changed:**

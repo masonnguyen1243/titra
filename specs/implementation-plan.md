@@ -304,6 +304,37 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] `POST /events/:id/members` — add member by email or guest by name (organizer only)
 - [x] `DELETE /events/:id/members/:memberId` — remove member (organizer only)
 
+**Events module — QA fixes**
+
+- [x] Fix `removeMember`: cho phép xoá thành viên dù có lịch sử tài chính — hiện tại service trả 409 Conflict, trái với spec §5.2 ("their logged expenses are preserved and still count toward balances"). Cần thay đổi schema: hoặc soft-delete `EventMember`, hoặc cho `Expense.paidById` nullable + `onDelete: SetNull` (F1)
+- [x] Fix `addMember` by email: gửi email thông báo mời cho người dùng khi organizer thêm qua email — hiện tại chỉ tạo thẳng `EventMember` row mà không gửi bất kỳ thông báo nào (F2)
+- [x] Fix `addMember` by email: luồng mời phải có bước chấp nhận — hiện tại người dùng bị thêm thẳng vào event mà không cần đồng ý, vi phạm privacy và trái với spec §5.2 ("sends invite"). Cần: (1) thêm `status` vào `EventMember` hoặc tạo bảng `EventInvitation` với `inviteToken` + `expiresAt`; (2) `addMember` chỉ tạo bản ghi `PENDING` và gửi email chứa link `accept`; (3) thêm `POST /events/:id/invitations/:token/accept` để người dùng xác nhận → chuyển status sang `MEMBER`; (4) chỉ `MEMBER` (không phải `PENDING`) mới được tính vào balance và thấy dữ liệu event (F5)
+- [x] Fix `addMember` by email: kiểm tra `isActive` và `emailVerified` của target user trước khi thêm vào event — hiện tại user bị deactivate hoặc chưa verify vẫn được thêm vào (F3)
+- [x] Fix `joinEvent`: chặn join event có status `SETTLED`, không chỉ `ARCHIVED` — member mới join sau khi đã settle sẽ phá vỡ số dư (F4)
+- [x] Fix `addMember` by email: trả về 200 thay vì tiết lộ sự tồn tại của email khi không tìm thấy user (hiện trả 404 — là oracle liệt kê tài khoản); theo pattern enumeration-safe đã dùng ở `forgotPassword` (S3)
+
+**Events module — missing features**
+
+- [ ] `PATCH /events/:id/invite` — regenerate invite token (vô hiệu hoá link cũ, tạo token mới) — frontend đã có nút "Regenerate" nhưng chưa có endpoint backend (M3)
+- [ ] Thêm FK từ `Event.organizerId` → `User` vào Prisma schema — hiện tại chỉ là `String` thuần, không có `@relation`; nếu user bị xoá sẽ tạo orphaned reference (M4)
+- [ ] Làm rõ hoặc restrict `GET /events/:id/invite`: spec §5.2 nói organizer chia sẻ invite link; hiện tại mọi member đều gọi được endpoint này (M5)
+
+**Events module — unit & integration test gaps**
+
+- [ ] Unit tests cho `EventsService` — hiện tại không có file `events.service.spec.ts` nào, coverage = 0% trong khi test plan yêu cầu ≥ 80% cho mọi API service (M1)
+  - `createEvent` — tạo event + organizer member trong transaction
+  - `getEvents` — lọc theo membership, loại trừ soft-deleted
+  - `getEventDetail` — 404 nếu không tìm thấy, 403 nếu không phải member
+  - `updateEvent` — 403 nếu không phải organizer
+  - `deleteEvent` — soft-delete, 403 nếu không phải organizer
+  - `joinEvent` — 400 nếu ARCHIVED/SETTLED, 400 nếu sai token, 409 nếu đã là member
+  - `addMember` — email path (404/409), guest path (tạo với `userId: null`)
+  - `removeMember` — 403 nếu không phải organizer, 400 nếu target là ORGANIZER
+- [ ] Integration tests cho Events endpoints dùng Supertest + Neon DB — test plan liệt kê đầy đủ các case nhưng chưa có file `events.e2e-spec.ts` nào (M2)
+  - `POST /events`, `GET /events`, `GET /events/:id`, `PATCH /events/:id`, `DELETE /events/:id`
+  - `GET /events/:id/invite`, `POST /events/:id/join`
+  - `POST /events/:id/members`, `DELETE /events/:id/members/:memberId`
+
 **Expenses module**
 
 - [ ] `POST /events/:id/expenses` — create expense + splits (equal or custom)

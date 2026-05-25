@@ -49,6 +49,16 @@ export class EventsController {
     return this.eventsService.addMember(id, user.sub, dto);
   }
 
+  @Post(':id/invitations/:token/accept')
+  @HttpCode(HttpStatus.OK)
+  acceptInvitation(
+    @Param('id') id: string,
+    @Param('token') token: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.eventsService.acceptInvitation(id, user.sub, token);
+  }
+
   @Post(':id/join')
   @HttpCode(HttpStatus.CREATED)
   joinEvent(
