@@ -5,6 +5,23 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (87) — Phase 3: Expenses module — GET /events/:id/balances (debt simplification)
+
+**Files changed:**
+- `apps/api/src/expenses/balance.service.ts` (**new**): `BalanceService.compute()` wraps the pure `simplifyDebts()` function. Algorithm: sort creditors (net > 0) and debtors (net < 0) by absolute value, greedily match largest pairs, emitting one `SettlementSuggestion` per pairing until all balances reach zero — O(n log n), minimum number of transactions.
+- `apps/api/src/expenses/balances.controller.ts` (**new**): `GET /events/:eventId/balances` → 200. Loads all ACTIVE members with their paid-expense totals and split totals via a single Prisma query, computes `net = totalPaid − totalOwed` per member, delegates to `BalanceService.compute()`. Returns `{ members: [...], settlements: [...] }`.
+- `apps/api/src/expenses/expenses.module.ts`: registered `BalancesController` and `BalanceService`; exports `BalanceService` for upcoming unit-test task.
+
+---
+
+## 2026-05-25 (86) — Phase 3: Expenses module — DELETE /events/:id/expenses/:expenseId (soft delete)
+
+**Files changed:**
+- `apps/api/src/expenses/expenses.service.ts`: added `deleteExpense()` — blocks deletion on SETTLED/ARCHIVED events; guards: caller must be the `paidBy` member (creator) or ORGANIZER; sets `deletedAt = now()` (soft delete — splits are preserved in DB for balance history).
+- `apps/api/src/expenses/expenses.controller.ts`: added `DELETE /events/:eventId/expenses/:expenseId` → 204 No Content.
+
+---
+
 ## 2026-05-25 (85) — Phase 3: Expenses module — PATCH /events/:id/expenses/:expenseId (edit expense)
 
 **Files changed:**

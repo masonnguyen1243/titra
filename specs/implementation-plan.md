@@ -354,8 +354,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] `POST /events/:id/expenses` — create expense + splits (equal or custom)
 - [x] `GET /events/:id/expenses` — list all non-deleted expenses
 - [x] `PATCH /events/:id/expenses/:expenseId` — edit expense (creator or organizer)
-- [ ] `DELETE /events/:id/expenses/:expenseId` — soft delete (creator or organizer)
-- [ ] `GET /events/:id/balances` — run debt simplification algorithm, return results
+- [x] `DELETE /events/:id/expenses/:expenseId` — soft delete (creator or organizer)
+- [x] `GET /events/:id/balances` — run debt simplification algorithm, return results
 - [ ] Balance calculation service (unit tested independently)
 - [ ] Cloudinary upload service (receipt photos)
 

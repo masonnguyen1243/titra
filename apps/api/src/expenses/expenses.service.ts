@@ -49,6 +49,52 @@ export class ExpensesService {
     });
   }
 
+  async deleteExpense(eventId: string, expenseId: string, callerId: string) {
+    const event = await this.prisma.event.findFirst({
+      where: { id: eventId, deletedAt: null },
+      select: {
+        status: true,
+        members: {
+          where: { userId: callerId, removedAt: null, status: MemberStatus.ACTIVE },
+          select: { id: true, role: true },
+        },
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Sự kiện không tồn tại');
+    }
+
+    if (event.status === EventStatus.SETTLED || event.status === EventStatus.ARCHIVED) {
+      throw new BadRequestException('Không thể xoá chi phí trong sự kiện đã kết thúc');
+    }
+
+    const callerMember = event.members[0];
+    if (!callerMember) {
+      throw new ForbiddenException('Bạn không phải thành viên của sự kiện này');
+    }
+
+    const expense = await this.prisma.expense.findFirst({
+      where: { id: expenseId, eventId, deletedAt: null },
+      select: { id: true, paidById: true },
+    });
+
+    if (!expense) {
+      throw new NotFoundException('Chi phí không tồn tại');
+    }
+
+    const isOrganizer = callerMember.role === MemberRole.ORGANIZER;
+    const isCreator = expense.paidById === callerMember.id;
+    if (!isOrganizer && !isCreator) {
+      throw new ForbiddenException('Chỉ người tạo hoặc ban tổ chức mới có thể xoá chi phí');
+    }
+
+    await this.prisma.expense.update({
+      where: { id: expenseId },
+      data: { deletedAt: new Date() },
+    });
+  }
+
   async updateExpense(eventId: string, expenseId: string, callerId: string, dto: UpdateExpenseDto) {
     const event = await this.prisma.event.findFirst({
       where: { id: eventId, deletedAt: null },
