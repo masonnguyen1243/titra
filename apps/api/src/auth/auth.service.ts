@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { Request, Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -41,6 +41,27 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
   ) {}
+
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private async storeRefreshToken(userId: string, token: string): Promise<void> {
+    const tokenHash = this.hashToken(token);
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
+    await this.prisma.refreshToken.create({ data: { userId, tokenHash, expiresAt } });
+  }
+
+  private async rotateRefreshToken(oldToken: string, userId: string, newToken: string): Promise<void> {
+    const oldHash = this.hashToken(oldToken);
+    const newHash = this.hashToken(newToken);
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
+
+    await this.prisma.$transaction([
+      this.prisma.refreshToken.delete({ where: { tokenHash: oldHash } }),
+      this.prisma.refreshToken.create({ data: { userId, tokenHash: newHash, expiresAt } }),
+    ]);
+  }
 
   async login(dto: LoginDto, res: Response) {
     const user = await this.prisma.user.findUnique({
@@ -85,6 +106,7 @@ export class AuthService {
       expiresIn: REFRESH_TOKEN_TTL,
     });
 
+    await this.storeRefreshToken(user.id, refreshToken);
     this.setTokenCookies(res, accessToken, refreshToken);
 
     return {
@@ -120,19 +142,29 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token không hợp lệ');
     }
 
+    // Validate token exists in DB — reject replayed/stolen tokens
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash: this.hashToken(token) },
+    });
+    if (!stored || stored.expiresAt < new Date()) {
+      throw new UnauthorizedException('Refresh token không hợp lệ');
+    }
+
     const newPayload = { sub: user.id, email: user.email, role: user.role };
 
-    const accessToken = this.jwtService.sign(newPayload, {
+    const newAccessToken = this.jwtService.sign(newPayload, {
       secret: process.env['JWT_SECRET'],
       expiresIn: ACCESS_TOKEN_TTL,
     });
 
-    const refreshToken = this.jwtService.sign(newPayload, {
+    const newRefreshToken = this.jwtService.sign(newPayload, {
       secret: process.env['JWT_REFRESH_SECRET'],
       expiresIn: REFRESH_TOKEN_TTL,
     });
 
-    this.setTokenCookies(res, accessToken, refreshToken);
+    // Rotate: invalidate old token, store new one atomically
+    await this.rotateRefreshToken(token, user.id, newRefreshToken);
+    this.setTokenCookies(res, newAccessToken, newRefreshToken);
 
     return { ok: true };
   }
@@ -291,6 +323,7 @@ export class AuthService {
       expiresIn: REFRESH_TOKEN_TTL,
     });
 
+    await this.storeRefreshToken(user.id, refreshToken);
     this.setTokenCookies(res, accessToken, refreshToken);
 
     return { id: user.id, name: user.name, email: user.email, role: user.role };
@@ -318,7 +351,13 @@ export class AuthService {
     };
   }
 
-  logout(res: Response) {
+  async logout(req: Request, res: Response) {
+    const token: string | undefined = (req.cookies as Record<string, string>)['refresh_token'];
+    if (token) {
+      const tokenHash = this.hashToken(token);
+      await this.prisma.refreshToken.deleteMany({ where: { tokenHash } });
+    }
+
     const cookieBase = {
       httpOnly: true,
       sameSite: 'lax' as const,

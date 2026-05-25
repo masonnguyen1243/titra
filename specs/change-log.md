@@ -5,6 +5,24 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (48) — Phase 3: Auth — Refresh token rotation with DB invalidation (M3)
+
+**Files changed:**
+- `apps/api/prisma/schema.prisma`: Added `RefreshToken` model (`id`, `userId`, `tokenHash` (unique), `expiresAt`, `createdAt`) with a cascade-delete relation to `User` and an index on `userId`.
+- `apps/api/prisma/migrations/20260525_add_refresh_token_table/migration.sql`: Migration SQL creating the `refresh_tokens` table, unique index on `tokenHash`, and FK to `users` with `ON DELETE CASCADE`.
+- `apps/api/src/auth/auth.service.ts`:
+  - Added `hashToken(token)` — SHA-256 hex digest of the raw JWT (deterministic, fast, no salt needed for lookup).
+  - Added `storeRefreshToken(userId, token)` — hashes and persists the token with a 7-day expiry.
+  - Added `rotateRefreshToken(oldToken, userId, newToken)` — atomically deletes the old hash and inserts the new one in a `$transaction`.
+  - `login()`: calls `storeRefreshToken()` after issuing tokens.
+  - `googleLogin()`: calls `storeRefreshToken()` after issuing tokens.
+  - `refresh()`: validates the incoming token against the DB; throws 401 if not found or expired; calls `rotateRefreshToken()` to blacklist old and register new token atomically.
+  - `logout()`: now accepts `req`, extracts the refresh token cookie, and calls `deleteMany` on its hash before clearing cookies.
+- `apps/api/src/auth/auth.controller.ts`: `logout` handler updated to inject `@Req()` and pass it to `authService.logout(req, res)`.
+- `apps/api/src/auth/auth.service.spec.ts`: Updated `mockPrisma` to include `refreshToken` (create/findUnique/delete/deleteMany) and `$transaction`. Fixed `logout` test (now async, passes mock `req`). Added second logout test for missing cookie. Updated `refresh` happy-path test to mock `refreshToken.findUnique/delete/create`.
+
+---
+
 ## 2026-05-25 (47b) — Phase 3: Auth — resendVerification unit tests
 
 **Files changed:**

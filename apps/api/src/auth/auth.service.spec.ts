@@ -26,6 +26,13 @@ const mockPrisma = {
     create: jest.fn(),
     update: jest.fn(),
   },
+  refreshToken: {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  $transaction: jest.fn().mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops)),
 };
 
 function makeMockResponse() {
@@ -139,6 +146,7 @@ describe('AuthService', () => {
 
     it('sets access and refresh token cookies and returns safe user fields on correct credentials', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(verifiedUser);
+      mockPrisma.refreshToken.create.mockResolvedValue({});
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       const res = makeMockResponse();
 
@@ -265,12 +273,16 @@ describe('AuthService', () => {
   });
 
   describe('logout', () => {
-    it('clears both token cookies and returns { ok: true }', () => {
+    it('clears both token cookies, invalidates the DB token, and returns { ok: true }', async () => {
+      const req = { cookies: { refresh_token: 'some-refresh-token' } } as unknown as Request;
       const res = makeMockResponse();
 
-      const result = service.logout(res);
+      const result = await service.logout(req, res);
 
       expect(result).toEqual({ ok: true });
+      expect(mockPrisma.refreshToken.deleteMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { tokenHash: expect.any(String) } }),
+      );
       expect((res as unknown as { clearCookie: jest.Mock }).clearCookie).toHaveBeenCalledWith(
         'access_token',
         expect.objectContaining({ httpOnly: true, path: '/' }),
@@ -279,6 +291,17 @@ describe('AuthService', () => {
         'refresh_token',
         expect.objectContaining({ httpOnly: true, path: '/' }),
       );
+    });
+
+    it('still clears cookies when no refresh_token cookie is present', async () => {
+      const req = { cookies: {} } as unknown as Request;
+      const res = makeMockResponse();
+
+      const result = await service.logout(req, res);
+
+      expect(result).toEqual({ ok: true });
+      expect(mockPrisma.refreshToken.deleteMany).not.toHaveBeenCalled();
+      expect((res as unknown as { clearCookie: jest.Mock }).clearCookie).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -512,6 +535,12 @@ describe('AuthService', () => {
         { secret: REFRESH_SECRET, expiresIn: '7d' },
       );
       mockPrisma.user.findUnique.mockResolvedValue(activeUser);
+      mockPrisma.refreshToken.findUnique.mockResolvedValue({
+        tokenHash: 'any',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+      mockPrisma.refreshToken.delete.mockResolvedValue({});
+      mockPrisma.refreshToken.create.mockResolvedValue({});
       const res = makeMockResponse();
 
       const result = await service.refresh(makeRequest(token), res);
