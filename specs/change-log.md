@@ -5,6 +5,17 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (59) — Phase 3: Events module — POST /events/:id/join
+
+**Files added:**
+- `apps/api/src/events/dto/join-event.dto.ts`: `JoinEventDto` with a required `token` string field (`@IsString @IsNotEmpty`).
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`: Added `joinEvent(eventId, userId, dto)` — fetches event by id (404 if not found or deleted); 400 if event is ARCHIVED; 400 if provided token doesn't match `event.inviteToken`; 409 if user already has a member row for this event. On success, looks up the user's name and creates an `EventMember` row with role `MEMBER`. Returns the new member record.
+- `apps/api/src/events/events.controller.ts`: Added `POST /events/:id/join` handler returning 201 Created.
+
+---
+
 ## 2026-05-25 (58) — Phase 3: Events module — GET /events/:id/invite
 
 **Files changed:**

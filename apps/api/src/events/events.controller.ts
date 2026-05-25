@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
 import { CreateEventDto } from './dto/create-event.dto';
+import { JoinEventDto } from './dto/join-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventsService } from './events.service';
 
@@ -25,6 +26,16 @@ export class EventsController {
   @HttpCode(HttpStatus.OK)
   getInvite(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.eventsService.getInvite(id, user.sub);
+  }
+
+  @Post(':id/join')
+  @HttpCode(HttpStatus.CREATED)
+  joinEvent(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: JoinEventDto,
+  ) {
+    return this.eventsService.joinEvent(id, user.sub, dto);
   }
 
   @Patch(':id')

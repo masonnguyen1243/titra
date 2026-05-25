@@ -1,7 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EventStatus, MemberRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
+import { JoinEventDto } from './dto/join-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 
 const EVENT_LIST_SELECT = {
@@ -127,6 +128,52 @@ export class EventsService {
     await this.prisma.event.update({
       where: { id: eventId },
       data: { deletedAt: new Date(), status: EventStatus.ARCHIVED },
+    });
+  }
+
+  async joinEvent(eventId: string, userId: string, dto: JoinEventDto) {
+    const event = await this.prisma.event.findFirst({
+      where: { id: eventId, deletedAt: null },
+      select: {
+        id: true,
+        status: true,
+        inviteToken: true,
+        members: { where: { userId }, select: { id: true } },
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Sự kiện không tồn tại');
+    }
+
+    if (event.status === EventStatus.ARCHIVED) {
+      throw new BadRequestException('Sự kiện đã bị lưu trữ, không thể tham gia');
+    }
+
+    if (event.inviteToken !== dto.token) {
+      throw new BadRequestException('Mã mời không hợp lệ');
+    }
+
+    if (event.members.length > 0) {
+      throw new ConflictException('Bạn đã là thành viên của sự kiện này');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Người dùng không tồn tại');
+    }
+
+    return this.prisma.eventMember.create({
+      data: {
+        eventId,
+        userId,
+        nickname: user.name,
+        role: MemberRole.MEMBER,
+      },
     });
   }
 
