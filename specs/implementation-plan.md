@@ -302,7 +302,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] `GET /events/:id/invite` — return invite link token
 - [x] `POST /events/:id/join` — join event via token (auto-register guest account if new)
 - [x] `POST /events/:id/members` — add member by email or guest by name (organizer only)
-- [ ] `DELETE /events/:id/members/:memberId` — remove member (organizer only)
+- [x] `DELETE /events/:id/members/:memberId` — remove member (organizer only)
 
 **Expenses module**
 

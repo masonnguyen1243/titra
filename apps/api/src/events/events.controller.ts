@@ -29,6 +29,16 @@ export class EventsController {
     return this.eventsService.getInvite(id, user.sub);
   }
 
+  @Delete(':id/members/:memberId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeMember(
+    @Param('id') id: string,
+    @Param('memberId') memberId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.eventsService.removeMember(id, user.sub, memberId);
+  }
+
   @Post(':id/members')
   @HttpCode(HttpStatus.CREATED)
   addMember(

@@ -5,6 +5,14 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (61) — Phase 3: Events module — DELETE /events/:id/members/:memberId
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`: Added `removeMember(eventId, callerId, memberId)` — 404 if event not found/deleted; 403 if caller is not the organizer; 404 if the target member row doesn't exist in this event; 400 if target has `role: ORGANIZER` (organizer cannot be removed); 409 if the member has any financial history (`paidExpenses`, `expenseSplits`, `sentSettlements`, or `receivedSettlements` counts > 0). On success, hard-deletes the `EventMember` row. Returns void; controller sends 204.
+- `apps/api/src/events/events.controller.ts`: Added `DELETE /events/:id/members/:memberId` handler returning 204 No Content.
+
+---
+
 ## 2026-05-25 (60) — Phase 3: Events module — POST /events/:id/members
 
 **Files added:**

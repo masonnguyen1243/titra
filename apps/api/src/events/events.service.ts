@@ -178,6 +178,59 @@ export class EventsService {
     });
   }
 
+  async removeMember(eventId: string, callerId: string, memberId: string) {
+    const event = await this.prisma.event.findFirst({
+      where: { id: eventId, deletedAt: null },
+      select: { organizerId: true },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Sự kiện không tồn tại');
+    }
+
+    if (event.organizerId !== callerId) {
+      throw new ForbiddenException('Chỉ ban tổ chức mới có thể xoá thành viên');
+    }
+
+    const member = await this.prisma.eventMember.findFirst({
+      where: { id: memberId, eventId },
+      select: {
+        id: true,
+        role: true,
+        _count: {
+          select: {
+            paidExpenses: true,
+            expenseSplits: true,
+            sentSettlements: true,
+            receivedSettlements: true,
+          },
+        },
+      },
+    });
+
+    if (!member) {
+      throw new NotFoundException('Thành viên không tồn tại trong sự kiện này');
+    }
+
+    if (member.role === MemberRole.ORGANIZER) {
+      throw new BadRequestException('Không thể xoá ban tổ chức khỏi sự kiện');
+    }
+
+    const hasHistory =
+      member._count.paidExpenses > 0 ||
+      member._count.expenseSplits > 0 ||
+      member._count.sentSettlements > 0 ||
+      member._count.receivedSettlements > 0;
+
+    if (hasHistory) {
+      throw new ConflictException(
+        'Thành viên này có lịch sử chi tiêu hoặc thanh toán, không thể xoá',
+      );
+    }
+
+    await this.prisma.eventMember.delete({ where: { id: memberId } });
+  }
+
   async addMember(eventId: string, callerId: string, dto: AddMemberDto) {
     if (!dto.email && !dto.name) {
       throw new BadRequestException('Cần cung cấp email hoặc tên khách');
