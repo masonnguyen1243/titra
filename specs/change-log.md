@@ -5,6 +5,16 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (49) — Phase 3: Auth — Stricter rate limiting on login & forgot-password (M9)
+
+**Files changed:**
+- `apps/api/src/app.module.ts`: Added `ThrottlerGuard` as the first `APP_GUARD` (applied before JWT and role guards). Named the existing throttler `'default'` to support per-endpoint overrides. Global limit remains 60 req/min per IP.
+- `apps/api/src/auth/auth.controller.ts`: Imported `Throttle` from `@nestjs/throttler`. Added `@Throttle({ default: { ttl: 60_000, limit: 5 } })` to `POST /auth/login` and `POST /auth/forgot-password`, overriding the global default to 5 req/min for those two endpoints only.
+
+**Note:** The `ThrottlerGuard` was not previously registered as a global guard, so the 60 req/min bucket was defined but never enforced. This change activates global rate limiting for the first time.
+
+---
+
 ## 2026-05-25 (48) — Phase 3: Auth — Refresh token rotation with DB invalidation (M3)
 
 **Files changed:**
