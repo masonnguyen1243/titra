@@ -5,6 +5,17 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (56) — Phase 3: Events module — PATCH /events/:id
+
+**Files added:**
+- `apps/api/src/events/dto/update-event.dto.ts`: All fields optional — `name` (`@MinLength(1) @MaxLength(100)`), `type` (`@IsEnum(EventType)`), `description` (`@MaxLength(500)`), `coverImageUrl` (`@IsUrl`).
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`: Added `updateEvent(eventId, userId, dto)` — fetches `organizerId` (404 if not found or deleted); throws 403 if caller is not the organizer; patches only the fields present in the DTO using conditional spread.
+- `apps/api/src/events/events.controller.ts`: Added `PATCH /events/:id` handler returning 200.
+
+---
+
 ## 2026-05-25 (55) — Phase 3: Events module — GET /events/:id
 
 **Files changed:**

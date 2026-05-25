@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { MemberRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
+import { UpdateEventDto } from './dto/update-event.dto';
 
 const EVENT_LIST_SELECT = {
   id: true,
@@ -58,6 +59,31 @@ export class EventsService {
     }
 
     return event;
+  }
+
+  async updateEvent(eventId: string, userId: string, dto: UpdateEventDto) {
+    const event = await this.prisma.event.findFirst({
+      where: { id: eventId, deletedAt: null },
+      select: { organizerId: true },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Sự kiện không tồn tại');
+    }
+
+    if (event.organizerId !== userId) {
+      throw new ForbiddenException('Chỉ ban tổ chức mới có thể chỉnh sửa sự kiện');
+    }
+
+    return this.prisma.event.update({
+      where: { id: eventId },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.type !== undefined && { type: dto.type }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.coverImageUrl !== undefined && { coverImageUrl: dto.coverImageUrl }),
+      },
+    });
   }
 
   async createEvent(userId: string, dto: CreateEventDto) {
