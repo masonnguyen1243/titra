@@ -4,9 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MemberStatus, SplitType } from '@prisma/client';
+import { EventStatus, MemberRole, MemberStatus, SplitType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
+import { UpdateExpenseDto } from './dto/update-expense.dto';
 
 @Injectable()
 export class ExpensesService {
@@ -45,6 +46,131 @@ export class ExpensesService {
           },
         },
       },
+    });
+  }
+
+  async updateExpense(eventId: string, expenseId: string, callerId: string, dto: UpdateExpenseDto) {
+    const event = await this.prisma.event.findFirst({
+      where: { id: eventId, deletedAt: null },
+      select: {
+        organizerId: true,
+        status: true,
+        members: {
+          where: { removedAt: null, status: MemberStatus.ACTIVE },
+          select: { id: true, userId: true, role: true },
+        },
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Sự kiện không tồn tại');
+    }
+
+    if (event.status === EventStatus.SETTLED || event.status === EventStatus.ARCHIVED) {
+      throw new BadRequestException('Không thể chỉnh sửa chi phí trong sự kiện đã kết thúc');
+    }
+
+    const callerMember = event.members.find((m) => m.userId === callerId);
+    if (!callerMember) {
+      throw new ForbiddenException('Bạn không phải thành viên của sự kiện này');
+    }
+
+    const expense = await this.prisma.expense.findFirst({
+      where: { id: expenseId, eventId, deletedAt: null },
+      include: { splits: { select: { memberId: true, amount: true } } },
+    });
+
+    if (!expense) {
+      throw new NotFoundException('Chi phí không tồn tại');
+    }
+
+    const isOrganizer = callerMember.role === MemberRole.ORGANIZER;
+    const isCreator = expense.paidById === callerMember.id;
+    if (!isOrganizer && !isCreator) {
+      throw new ForbiddenException('Chỉ người tạo hoặc ban tổ chức mới có thể chỉnh sửa chi phí');
+    }
+
+    const activeMemberIds = new Set(event.members.map((m) => m.id));
+
+    // Determine if splits need to be rebuilt
+    const rebuildSplits =
+      dto.amount !== undefined ||
+      dto.splitType !== undefined ||
+      dto.memberIds !== undefined ||
+      dto.splits !== undefined;
+
+    const finalAmount = dto.amount ?? expense.amount;
+    const finalSplitType = dto.splitType ?? expense.splitType;
+
+    let newSplits: { memberId: string; amount: number }[] | undefined;
+
+    if (rebuildSplits) {
+      if (finalSplitType === SplitType.EQUAL) {
+        const targetIds = dto.memberIds ?? expense.splits.map((s) => s.memberId);
+        const invalidIds = targetIds.filter((id) => !activeMemberIds.has(id));
+        if (invalidIds.length > 0) {
+          throw new BadRequestException('Một số thành viên không thuộc sự kiện này');
+        }
+        if (targetIds.length === 0) {
+          throw new BadRequestException('Cần ít nhất một thành viên để chia chi phí');
+        }
+        newSplits = computeEqualSplits(finalAmount, targetIds);
+      } else {
+        const splitsPayload = dto.splits ?? expense.splits;
+        if (!splitsPayload || splitsPayload.length === 0) {
+          throw new BadRequestException('Cần cung cấp danh sách phân chia chi phí cho chế độ tuỳ chỉnh');
+        }
+        const invalidIds = splitsPayload.filter((s) => !activeMemberIds.has(s.memberId));
+        if (invalidIds.length > 0) {
+          throw new BadRequestException('Một số thành viên trong danh sách phân chia không thuộc sự kiện này');
+        }
+        const total = splitsPayload.reduce((sum, s) => sum + s.amount, 0);
+        if (total !== finalAmount) {
+          throw new BadRequestException(
+            `Tổng tiền phân chia (${total} ₫) không khớp với số tiền chi phí (${finalAmount} ₫)`,
+          );
+        }
+        newSplits = splitsPayload;
+      }
+    }
+
+    if (dto.paidById !== undefined) {
+      const validPayer = event.members.find((m) => m.id === dto.paidById);
+      if (!validPayer) {
+        throw new BadRequestException('Người thanh toán không phải thành viên của sự kiện');
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      if (newSplits) {
+        await tx.expenseSplit.deleteMany({ where: { expenseId } });
+        await tx.expenseSplit.createMany({
+          data: newSplits.map((s) => ({ expenseId, memberId: s.memberId, amount: s.amount })),
+        });
+      }
+
+      return tx.expense.update({
+        where: { id: expenseId },
+        data: {
+          ...(dto.paidById !== undefined && { paidById: dto.paidById }),
+          ...(dto.amount !== undefined && { amount: dto.amount }),
+          ...(dto.description !== undefined && { description: dto.description }),
+          ...(dto.category !== undefined && { category: dto.category }),
+          ...(dto.receiptUrl !== undefined && { receiptUrl: dto.receiptUrl }),
+          ...(dto.splitType !== undefined && { splitType: dto.splitType }),
+        },
+        include: {
+          paidBy: { select: { id: true, nickname: true, userId: true } },
+          splits: {
+            select: {
+              id: true,
+              memberId: true,
+              amount: true,
+              member: { select: { nickname: true, userId: true } },
+            },
+          },
+        },
+      });
     });
   }
 

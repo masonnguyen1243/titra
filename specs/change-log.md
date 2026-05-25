@@ -5,6 +5,15 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (85) — Phase 3: Expenses module — PATCH /events/:id/expenses/:expenseId (edit expense)
+
+**Files changed:**
+- `apps/api/src/expenses/dto/update-expense.dto.ts` (**new**): all fields optional; `@ValidateIf` keeps `splits` required only when `splitType` is being set to `CUSTOM`.
+- `apps/api/src/expenses/expenses.service.ts`: added `updateExpense()` — blocks edits on SETTLED/ARCHIVED events; guards: caller must be `paidBy` member (creator) or ORGANIZER; if any split-related field changes (`amount`, `splitType`, `memberIds`, `splits`), deletes old splits and creates new ones atomically in a transaction; falls back to existing split data when partial info is supplied (e.g. only `amount` changes on a CUSTOM expense reuses stored splits).
+- `apps/api/src/expenses/expenses.controller.ts`: added `PATCH /events/:eventId/expenses/:expenseId` → 200.
+
+---
+
 ## 2026-05-25 (84) — Phase 3: Expenses module — GET /events/:id/expenses (list non-deleted expenses)
 
 **Files changed:**
