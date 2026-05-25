@@ -12,6 +12,42 @@ import { CreateExpenseDto } from './dto/create-expense.dto';
 export class ExpensesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async getExpenses(eventId: string, callerId: string) {
+    const event = await this.prisma.event.findFirst({
+      where: { id: eventId, deletedAt: null },
+      select: {
+        members: {
+          where: { userId: callerId, removedAt: null, status: MemberStatus.ACTIVE },
+          select: { id: true },
+        },
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Sự kiện không tồn tại');
+    }
+
+    if (event.members.length === 0) {
+      throw new ForbiddenException('Bạn không phải thành viên của sự kiện này');
+    }
+
+    return this.prisma.expense.findMany({
+      where: { eventId, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        paidBy: { select: { id: true, nickname: true, userId: true } },
+        splits: {
+          select: {
+            id: true,
+            memberId: true,
+            amount: true,
+            member: { select: { nickname: true, userId: true } },
+          },
+        },
+      },
+    });
+  }
+
   async createExpense(eventId: string, callerId: string, dto: CreateExpenseDto) {
     const event = await this.prisma.event.findFirst({
       where: { id: eventId, deletedAt: null },

@@ -5,6 +5,14 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (84) — Phase 3: Expenses module — GET /events/:id/expenses (list non-deleted expenses)
+
+**Files changed:**
+- `apps/api/src/expenses/expenses.service.ts`: added `getExpenses()` — verifies caller is an ACTIVE member of the event, then returns all non-deleted expenses ordered by `createdAt DESC`, each including `paidBy` member info and `splits` with member nickname/userId.
+- `apps/api/src/expenses/expenses.controller.ts`: added `GET /events/:eventId/expenses` → 200.
+
+---
+
 ## 2026-05-25 (83) — Phase 3: Expenses module — POST /events/:id/expenses (create expense + splits)
 
 **Files changed:**

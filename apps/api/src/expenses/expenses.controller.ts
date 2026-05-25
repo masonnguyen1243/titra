@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
 import { CreateExpenseDto } from './dto/create-expense.dto';
@@ -7,6 +7,12 @@ import { ExpensesService } from './expenses.service';
 @Controller('events/:eventId/expenses')
 export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}
+
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  getExpenses(@Param('eventId') eventId: string, @CurrentUser() user: JwtPayload) {
+    return this.expensesService.getExpenses(eventId, user.sub);
+  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

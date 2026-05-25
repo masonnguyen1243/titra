@@ -352,7 +352,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 **Expenses module**
 
 - [x] `POST /events/:id/expenses` — create expense + splits (equal or custom)
-- [ ] `GET /events/:id/expenses` — list all non-deleted expenses
+- [x] `GET /events/:id/expenses` — list all non-deleted expenses
 - [ ] `PATCH /events/:id/expenses/:expenseId` — edit expense (creator or organizer)
 - [ ] `DELETE /events/:id/expenses/:expenseId` — soft delete (creator or organizer)
 - [ ] `GET /events/:id/balances` — run debt simplification algorithm, return results
