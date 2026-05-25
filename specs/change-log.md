@@ -5,6 +5,14 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (54) — Phase 3: Events module — GET /events
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`: Added `EVENT_LIST_SELECT` constant (id, name, description, type, status, coverImageUrl, organizerId, createdAt, updatedAt, `_count.members`). Added `getEvents(userId)` — queries events where `deletedAt` is null and the user is a member (`members.some({ userId })`), ordered by `createdAt desc`.
+- `apps/api/src/events/events.controller.ts`: Added `GET /events` handler returning 200, delegating to `eventsService.getEvents`.
+
+---
+
 ## 2026-05-25 (53) — Phase 3: Events module — POST /events
 
 **Files added:**
