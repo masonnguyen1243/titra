@@ -5,6 +5,19 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (53) — Phase 3: Events module — POST /events
+
+**Files added:**
+- `apps/api/src/events/dto/create-event.dto.ts`: `CreateEventDto` with `name` (`@IsString @IsNotEmpty @MaxLength(100)`), optional `type` (`@IsEnum(EventType)`), optional `description` (`@IsString @MaxLength(500)`), and optional `coverImageUrl` (`@IsUrl`).
+- `apps/api/src/events/events.service.ts`: `EventsService` with `createEvent(userId, dto)` — fetches the user's `name` from DB (throws 404 if not found), then runs a `$transaction` that (1) creates the `Event` row with `organizerId` set to the caller and (2) creates an `EventMember` row linking the user as `ORGANIZER`. Returns the event object with the `members` array.
+- `apps/api/src/events/events.controller.ts`: `EventsController` at path `events`. `POST /events` is protected by the global `JwtAuthGuard`, uses `@CurrentUser()` to extract the user ID, returns 201.
+- `apps/api/src/events/events.module.ts`: NestJS module wiring `EventsController` and `EventsService`.
+
+**Files changed:**
+- `apps/api/src/app.module.ts`: Added `EventsModule` to the `imports` array.
+
+---
+
 ## 2026-05-25 (52) — Phase 3: Users module — GET /users/me + PATCH /users/me
 
 **Files added:**
