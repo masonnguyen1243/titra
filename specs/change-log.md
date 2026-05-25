@@ -5,6 +5,30 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (45) — Phase 3: Auth QA fix — RegisterDto rejects empty name (M7)
+
+**Files changed:**
+- `apps/api/src/auth/dto/register.dto.ts`: Added `@IsNotEmpty()` decorator to the `name` field (alongside the existing `@IsString()`). Previously, `name: ""` passed validation and was written to the database. The global `ValidationPipe` enforces the constraint at the HTTP boundary, so no service changes were needed.
+
+---
+
+## 2026-05-25 (44) — Phase 3: Auth QA fix — forgotPassword() skips unverified accounts (M11)
+
+**Files changed:**
+- `apps/api/src/auth/auth.service.ts`: Added `emailVerified` to the `select` in `forgotPassword()`. Extended the early-return guard from `!user || !user.isActive` to also include `!user.emailVerified`. Unverified accounts now silently receive `{ ok: true }` without generating a token or sending an email — consistent with the enumeration-safe pattern already used for unknown/inactive users.
+- `apps/api/src/auth/auth.service.spec.ts`: Added `emailVerified: true` to the `activeUser` fixture (required now that the field is selected). Added one new test: `emailVerified: false` → returns `{ ok: true }`, `update` not called. Total tests: 27, all passing.
+
+Also ran `prisma generate` to resolve stale client errors on `passwordResetExpiry` that surfaced during typecheck.
+
+---
+
+## 2026-05-25 (43) — Phase 3: Auth QA fix — GET /auth/health returns 503 when degraded (F3)
+
+**Files changed:**
+- `apps/api/src/auth/auth.controller.ts`: Replaced the static `@HttpCode(HttpStatus.OK)` on the `health` endpoint with dynamic status code logic. The controller now awaits `authService.health()` and calls `res.status(503)` before returning the body when `result.status === 'degraded'`. Previously the endpoint always returned 200 regardless of DB or JWT config failures, preventing load balancers from detecting the degraded state.
+
+---
+
 ## 2026-05-25 (42) — Test fix: auth.service.spec.ts updated for F1 + F2
 
 **Issue:** After F1 and F2 changes, the test suite had 1 failure and 2 missing cases.

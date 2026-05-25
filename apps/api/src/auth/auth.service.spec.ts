@@ -367,6 +367,7 @@ describe('AuthService', () => {
       name: 'Nguyen Van A',
       email: 'test@example.com',
       isActive: true,
+      emailVerified: true,
     };
 
     it('generates a reset token, persists it, and returns { ok: true } for a known active user', async () => {
@@ -403,6 +404,15 @@ describe('AuthService', () => {
 
     it('returns { ok: true } without touching DB when user is inactive (prevents enumeration)', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({ ...activeUser, isActive: false });
+
+      const result = await service.forgotPassword({ email: activeUser.email });
+
+      expect(result).toEqual({ ok: true });
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('returns { ok: true } without touching DB when emailVerified is false (prevents reset for unverified accounts)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ ...activeUser, emailVerified: false });
 
       const result = await service.forgotPassword({ email: activeUser.email });
 

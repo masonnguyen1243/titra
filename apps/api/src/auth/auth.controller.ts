@@ -56,8 +56,11 @@ export class AuthController {
   }
 
   @Get('health')
-  @HttpCode(HttpStatus.OK)
-  health() {
-    return this.authService.health();
+  async health(@Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.health();
+    if (result.status === 'degraded') {
+      res.status(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+    return result;
   }
 }

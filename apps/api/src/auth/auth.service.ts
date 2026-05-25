@@ -196,11 +196,11 @@ export class AuthService {
   async forgotPassword(dto: ForgotPasswordDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
-      select: { id: true, name: true, email: true, isActive: true },
+      select: { id: true, name: true, email: true, isActive: true, emailVerified: true },
     });
 
     // Always return ok to prevent user enumeration
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || !user.emailVerified) {
       return { ok: true };
     }
 
