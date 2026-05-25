@@ -5,6 +5,16 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (89) — Phase 3: Cloudinary upload service (receipt photos)
+
+**Files changed:**
+- `apps/api/src/upload/cloudinary.service.ts` (**new**): `CloudinaryService` — configured via `CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET`; gracefully degrades to mock responses when env vars are absent (dev/test). Methods: `generateSignedUploadParams(folder)` returns signed params for direct browser→Cloudinary uploads (files never pass through NestJS); `uploadBuffer(buffer, folder)` for server-side uploads (used by future export module); `deleteFile(publicId)` for cleanup.
+- `apps/api/src/upload/upload.controller.ts` (**new**): `GET /api/v1/upload/sign?folder=receipts` → 200 with `{ signature, timestamp, apiKey, cloudName, folder }`. Defaults to `folder=receipts` if omitted.
+- `apps/api/src/upload/upload.module.ts` (**new**): exports `CloudinaryService` so it can be injected by future modules (export, etc.).
+- `apps/api/src/app.module.ts`: registered `UploadModule`.
+
+---
+
 ## 2026-05-25 (88) — Phase 3: Expenses module — Balance calculation service unit tests
 
 **Files changed:**
