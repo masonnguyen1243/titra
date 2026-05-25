@@ -5,6 +5,14 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (55) — Phase 3: Events module — GET /events/:id
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`: Added `getEventDetail(eventId, userId)` — fetches the event by ID where `deletedAt` is null (404 if not found); includes `members` ordered by role then join date; throws 403 if the caller is not in the members list.
+- `apps/api/src/events/events.controller.ts`: Added `GET /events/:id` handler returning 200.
+
+---
+
 ## 2026-05-25 (54) — Phase 3: Events module — GET /events
 
 **Files changed:**

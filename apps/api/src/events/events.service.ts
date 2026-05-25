@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { MemberRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -29,6 +29,35 @@ export class EventsService {
       select: EVENT_LIST_SELECT,
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async getEventDetail(eventId: string, userId: string) {
+    const event = await this.prisma.event.findFirst({
+      where: { id: eventId, deletedAt: null },
+      include: {
+        members: {
+          orderBy: [{ role: 'asc' }, { joinedAt: 'asc' }],
+          select: {
+            id: true,
+            userId: true,
+            nickname: true,
+            role: true,
+            joinedAt: true,
+          },
+        },
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Sự kiện không tồn tại');
+    }
+
+    const isMember = event.members.some((m) => m.userId === userId);
+    if (!isMember) {
+      throw new ForbiddenException('Bạn không phải thành viên của sự kiện này');
+    }
+
+    return event;
   }
 
   async createEvent(userId: string, dto: CreateEventDto) {
