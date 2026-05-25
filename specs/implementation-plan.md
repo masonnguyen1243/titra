@@ -285,7 +285,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Unit test: `refresh()` with expired token (correct secret, `exp` in past) → 401 (M5)
 - [x] Unit test: `refresh()` with inactive user → 401 (M6)
 - [x] Unit test: `refresh()` with unverified user → 401 (M6)
-- [ ] Integration tests for all auth endpoints (`register`, `login`, `refresh`, `logout`, `verify-email`, `forgot-password`, `reset-password`) using Supertest + testcontainers (M10)
+- [x] Integration tests for all auth endpoints (`register`, `login`, `refresh`, `logout`, `verify-email`, `forgot-password`, `reset-password`) using Supertest + Neon DB (M10)
 
 **Users module**
 

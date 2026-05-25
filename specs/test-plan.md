@@ -20,7 +20,7 @@
 |----------------|-------------------------|---------------------------|--------------|
 | Unit           | Vitest                  | `apps/api/src/**/*.spec.ts` | Every push |
 | Unit           | Vitest                  | `packages/shared/**/*.spec.ts` | Every push |
-| Integration    | Vitest + Supertest + testcontainers | `apps/api/test/*.e2e-spec.ts` | Every PR |
+| Integration    | Jest + Supertest (Neon DB)          | `apps/api/test/*.e2e-spec.ts` | Every PR |
 | Component      | Vitest + React Testing Library | `apps/web/**/*.spec.tsx` | Every push |
 | E2E            | Playwright              | `apps/web/e2e/`           | Pre-merge to main |
 
@@ -73,7 +73,7 @@
 
 ## Integration Tests (API)
 
-Use a real PostgreSQL instance via testcontainers (Docker). Each test suite seeds its own data and rolls back after.
+Use the real PostgreSQL instance from `DATABASE_URL` (Neon). Each test run prefixes all emails with a unique stamp (`e2e-<timestamp>-`) for isolation; all created rows are deleted in `afterAll`. No Docker required.
 
 ### Auth endpoints
 - `POST /api/v1/auth/register` — happy path and error cases
@@ -187,7 +187,7 @@ Covers the full happy path for MVP's core flows.
 
 # On every PR
 - All above
-- pnpm test:integration   # Supertest + testcontainers
+- pnpm test:e2e           # Supertest integration tests (Neon DB)
 
 # On merge to main
 - All above

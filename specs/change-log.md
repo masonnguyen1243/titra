@@ -5,6 +5,26 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (51) — Phase 3: Auth — Integration tests with Supertest + Neon DB (M10)
+
+**Files added:**
+- `apps/api/test/auth.e2e-spec.ts`: 33 integration tests across 7 describe blocks covering all auth endpoints. Runs against the `DATABASE_URL` from `.env` (Neon PostgreSQL — no Docker needed). Isolation: every email is prefixed with a unique per-run stamp (`e2e-<timestamp>-`); stale rows from prior runs are deleted in `beforeAll`, and all rows created in this run are deleted in `afterAll`. `ThrottlerGuard.prototype.canActivate` is spied on before module compilation to prevent 429s during rapid test execution.
+  - `POST /auth/register` (7 cases): happy path, DB persistence, duplicate email, missing/empty name, invalid email, short password.
+  - `POST /auth/login` (6 cases): HttpOnly cookies on success, safe body, wrong password, unknown email, unverified email, inactive user.
+  - `POST /auth/refresh` (3 cases): valid token → new cookies, no cookie → 401, token absent from DB → 401.
+  - `POST /auth/logout` (3 cases): cookies cleared, ok without cookie, refresh token deleted from DB.
+  - `POST /auth/verify-email` (5 cases): marks verified + clears token, idempotent for already-verified, unknown token, expired token, user can log in after verification.
+  - `POST /auth/forgot-password` (4 cases): always ok (enumeration-safe), reset token persisted for verified user, no token for unverified user, missing field → 400.
+  - `POST /auth/reset-password` (5 cases): password changed (old rejected, new accepted), unknown token, expired token, short password, token is single-use.
+- `apps/api/test/jest-e2e.json`: Jest config for e2e suite (`tsconfig.e2e.json`, `test/*.e2e-spec.ts`, 120 s timeout).
+- `apps/api/tsconfig.e2e.json`: TypeScript config extending the base with `esModuleInterop: true` and `include: ["src/**/*", "test/**/*"]`.
+
+**Files changed:**
+- `apps/api/package.json`: Added `test:e2e` script; added `supertest` + `@types/supertest` devDependencies.
+- `apps/api/tsconfig.json`: Added `test/**/*` to `include` so IDE diagnostics work for e2e files (production build still excluded via `tsconfig.build.json`).
+
+---
+
 ## 2026-05-25 (50) — Phase 3: Auth — Unit test gaps closed (M5, M6)
 
 **Files changed:**
