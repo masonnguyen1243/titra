@@ -5,6 +5,17 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (83) — Phase 3: Expenses module — POST /events/:id/expenses (create expense + splits)
+
+**Files changed:**
+- `apps/api/src/expenses/dto/create-expense.dto.ts` (**new**): `CreateExpenseDto` with `SplitItemDto` nested class. Validates `splitType` (EQUAL/CUSTOM), `paidById`, `amount` (integer ≥ 1), `description` (max 200), optional `category`, `receiptUrl`. For EQUAL mode accepts optional `memberIds` array; for CUSTOM mode requires `splits` array via `@ValidateIf`.
+- `apps/api/src/expenses/expenses.service.ts` (**new**): `ExpensesService.createExpense()` — validates caller is ACTIVE member, validates `paidById` is an ACTIVE member, computes splits (EQUAL with remainder to first member per spec, CUSTOM with sum-check), creates expense + splits in a single Prisma transaction, returns full expense with paidBy and splits included.
+- `apps/api/src/expenses/expenses.controller.ts` (**new**): `POST /events/:eventId/expenses` → 201.
+- `apps/api/src/expenses/expenses.module.ts` (**new**): NestJS module wiring controller + service.
+- `apps/api/src/app.module.ts`: registered `ExpensesModule`.
+
+---
+
 ## 2026-05-25 (82) — Phase 3: Events module — integration tests for all Events endpoints (M2)
 
 **Files changed:**

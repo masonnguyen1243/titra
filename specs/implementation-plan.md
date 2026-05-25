@@ -351,7 +351,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Expenses module**
 
-- [ ] `POST /events/:id/expenses` — create expense + splits (equal or custom)
+- [x] `POST /events/:id/expenses` — create expense + splits (equal or custom)
 - [ ] `GET /events/:id/expenses` — list all non-deleted expenses
 - [ ] `PATCH /events/:id/expenses/:expenseId` — edit expense (creator or organizer)
 - [ ] `DELETE /events/:id/expenses/:expenseId` — soft delete (creator or organizer)

@@ -8,6 +8,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { EventsModule } from './events/events.module';
+import { ExpensesModule } from './expenses/expenses.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -22,6 +23,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     UsersModule,
     EventsModule,
+    ExpensesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
