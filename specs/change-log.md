@@ -5,6 +5,13 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (40) — Phase 3: Auth QA fix — login() checks isActive before bcrypt (F1)
+
+**Files changed:**
+- `apps/api/src/auth/auth.service.ts`: Reordered `login()` checks. `isActive` is now verified **before** `bcrypt.compare`. If the user does not exist or is inactive, the method immediately throws the same generic `UnauthorizedException('Email hoặc mật khẩu không đúng')` without running bcrypt. Previously, a caller who supplied the correct password for a deactivated account received the distinct error "Tài khoản đã bị vô hiệu hoá" — leaking both account existence and password correctness. The new order: (1) find user, (2) check `isActive`, (3) bcrypt compare, (4) check `emailVerified`.
+
+---
+
 ## 2026-05-24 (39) — Phase 3: Auth module — GET /auth/health
 
 **Files changed:**

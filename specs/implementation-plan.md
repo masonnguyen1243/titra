@@ -264,6 +264,29 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] JWT auth guard + role guard (ADMIN, ORGANIZER, MEMBER)
 - [x] `GET /auth/health` — public endpoint that checks JWT config and DB connectivity for the auth subsystem
 
+**Auth module — QA fixes**
+
+- [x] Fix `login()`: check `isActive` before bcrypt compare — current order leaks account status via distinct error messages (F1)
+- [ ] Fix `resetPassword()`: verify `isActive` before accepting reset token — deactivated user can currently reset password within the 1h TTL window (F2)
+- [ ] Fix `GET /auth/health`: return HTTP 503 when `status` is `"degraded"` so load balancers detect the degraded state (F3)
+- [ ] Fix `forgotPassword()`: skip token generation when `emailVerified` is `false` — currently issues reset email for unverified accounts (M11)
+- [ ] Add `@IsNotEmpty` to `name` field in `RegisterDto` — empty string is currently accepted (M7)
+
+**Auth module — missing features**
+
+- [ ] `POST /auth/google` — Google OAuth login via Passport + `@nestjs/passport` strategy (M1)
+- [ ] `POST /auth/resend-verification` — resend email verification link; needed by the "Gửi lại email" button already in the frontend (M2)
+- [ ] Refresh token rotation with invalidation: persist refresh token hash in DB, blacklist on use so stolen tokens cannot be replayed for the full 7-day window (M3)
+- [ ] Stricter per-endpoint rate limiting on `POST /auth/login` and `POST /auth/forgot-password` (e.g. 5 req/min per IP) separate from the global 60 req/min bucket (M9)
+
+**Auth module — unit & integration test gaps**
+
+- [ ] Unit test: `login()` with `isActive: false` → 401 (M4)
+- [ ] Unit test: `refresh()` with expired token (correct secret, `exp` in past) → 401 (M5)
+- [ ] Unit test: `refresh()` with inactive user → 401 (M6)
+- [ ] Unit test: `refresh()` with unverified user → 401 (M6)
+- [ ] Integration tests for all auth endpoints (`register`, `login`, `refresh`, `logout`, `verify-email`, `forgot-password`, `reset-password`) using Supertest + testcontainers (M10)
+
 **Users module**
 
 - [ ] `GET /users/me` — return current user profile
@@ -401,6 +424,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 - [ ] Login: required fields, valid email format
 - [ ] Register: required fields, valid email, password min 8 chars, passwords match
+- [ ] Add `@MaxLength` to backend DTOs: `name` ≤ 100 chars, `password` ≤ 128 chars — no upper bounds currently; omitting lets attackers force bcrypt to process oversized input (M8)
 - [ ] Create Event: name required, type required
 - [ ] Add Expense: amount > 0 required, description required, custom split must sum to total
 - [ ] Record Settlement: amount > 0, method required

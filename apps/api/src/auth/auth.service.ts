@@ -54,20 +54,21 @@ export class AuthService {
       },
     });
 
+    // Check isActive before bcrypt to avoid leaking account status via distinct errors
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+    }
+
     const isValid =
-      user?.passwordHash != null &&
+      user.passwordHash != null &&
       (await bcrypt.compare(dto.password, user.passwordHash));
 
-    if (!user || !isValid) {
+    if (!isValid) {
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
     }
 
     if (!user.emailVerified) {
       throw new UnauthorizedException('Vui lòng xác nhận email trước khi đăng nhập');
-    }
-
-    if (!user.isActive) {
-      throw new UnauthorizedException('Tài khoản đã bị vô hiệu hoá');
     }
 
     const payload = { sub: user.id, email: user.email, role: user.role };
