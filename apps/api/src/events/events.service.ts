@@ -26,7 +26,7 @@ const EVENT_LIST_SELECT = {
   organizerId: true,
   createdAt: true,
   updatedAt: true,
-  _count: { select: { members: true } },
+  _count: { select: { members: { where: { status: MemberStatus.ACTIVE, removedAt: null } } } },
 } as const;
 
 @Injectable()
@@ -192,7 +192,7 @@ export class EventsService {
     if (removedMember) {
       return this.prisma.eventMember.update({
         where: { id: removedMember.id },
-        data: { removedAt: null, joinedAt: new Date() },
+        data: { removedAt: null, joinedAt: new Date(), status: MemberStatus.ACTIVE, inviteToken: null, inviteTokenExpiry: null },
       });
     }
 
@@ -209,7 +209,7 @@ export class EventsService {
   async removeMember(eventId: string, callerId: string, memberId: string) {
     const event = await this.prisma.event.findFirst({
       where: { id: eventId, deletedAt: null },
-      select: { organizerId: true },
+      select: { organizerId: true, status: true },
     });
 
     if (!event) {
@@ -218,6 +218,10 @@ export class EventsService {
 
     if (event.organizerId !== callerId) {
       throw new ForbiddenException('Chỉ ban tổ chức mới có thể xoá thành viên');
+    }
+
+    if (event.status === EventStatus.SETTLED || event.status === EventStatus.ARCHIVED) {
+      throw new BadRequestException('Không thể xoá thành viên khỏi sự kiện đã kết thúc');
     }
 
     const member = await this.prisma.eventMember.findFirst({
@@ -264,8 +268,8 @@ export class EventsService {
       throw new ForbiddenException('Chỉ ban tổ chức mới có thể thêm thành viên');
     }
 
-    if (event.status === EventStatus.ARCHIVED) {
-      throw new BadRequestException('Không thể thêm thành viên vào sự kiện đã lưu trữ');
+    if (event.status === EventStatus.ARCHIVED || event.status === EventStatus.SETTLED) {
+      throw new BadRequestException('Không thể thêm thành viên vào sự kiện đã kết thúc');
     }
 
     if (dto.email) {
@@ -274,22 +278,14 @@ export class EventsService {
         select: { id: true, name: true, isActive: true, emailVerified: true },
       });
 
-      if (!target) {
-        // Enumeration-safe: don't reveal whether the email has an account
+      // Enumeration-safe: treat missing, deactivated, and unverified accounts identically
+      if (!target || !target.isActive || !target.emailVerified) {
         return { ok: true };
-      }
-
-      if (!target.isActive) {
-        throw new BadRequestException('Tài khoản người dùng này đã bị vô hiệu hoá');
-      }
-
-      if (!target.emailVerified) {
-        throw new BadRequestException('Người dùng này chưa xác minh email, vui lòng yêu cầu họ xác minh trước');
       }
 
       const existing = await this.prisma.eventMember.findUnique({
         where: { eventId_userId: { eventId, userId: target.id } },
-        select: { id: true, removedAt: true, status: true },
+        select: { id: true, removedAt: true, status: true, joinedAt: true },
       });
 
       const inviteToken = randomUUID();
@@ -299,6 +295,11 @@ export class EventsService {
       if (existing) {
         if (existing.removedAt === null && existing.status === MemberStatus.ACTIVE) {
           throw new ConflictException('Người dùng này đã là thành viên của sự kiện');
+        }
+        // Rate-limit re-invites: silently drop if last invite was within 1 hour
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        if (existing.status === MemberStatus.PENDING && existing.joinedAt > oneHourAgo) {
+          return { ok: true };
         }
         // Re-invite: either previously removed or pending (never accepted)
         member = await this.prisma.eventMember.update({
@@ -333,7 +334,8 @@ export class EventsService {
         inviteToken,
       );
 
-      return member;
+      const { inviteToken: _t, inviteTokenExpiry: _e, ...safeResponse } = member;
+      return safeResponse;
     }
 
     // Guest path: userId is null, nickname is the provided name
@@ -345,11 +347,25 @@ export class EventsService {
   async acceptInvitation(eventId: string, userId: string, token: string) {
     const member = await this.prisma.eventMember.findFirst({
       where: { eventId, inviteToken: token, removedAt: null },
-      select: { id: true, userId: true, status: true, inviteTokenExpiry: true },
+      select: {
+        id: true,
+        userId: true,
+        status: true,
+        inviteTokenExpiry: true,
+        event: { select: { deletedAt: true, status: true } },
+      },
     });
 
     if (!member) {
       throw new NotFoundException('Lời mời không hợp lệ hoặc đã được sử dụng');
+    }
+
+    if (member.event.deletedAt !== null) {
+      throw new BadRequestException('Sự kiện không còn tồn tại');
+    }
+
+    if (member.event.status === EventStatus.SETTLED || member.event.status === EventStatus.ARCHIVED) {
+      throw new BadRequestException('Sự kiện đã kết thúc, không thể chấp nhận lời mời');
     }
 
     if (member.userId !== userId) {
@@ -378,7 +394,7 @@ export class EventsService {
     inviteToken: string,
   ) {
     const appUrl = process.env['NEXT_PUBLIC_APP_URL'] ?? 'http://localhost:3000';
-    const eventUrl = `${appUrl}/invitations/accept?token=${inviteToken}`;
+    const eventUrl = `${appUrl}/invitations/${inviteToken}/accept`;
 
     const resendApiKey = process.env['RESEND_API_KEY'];
     if (!resendApiKey) {
@@ -409,6 +425,39 @@ export class EventsService {
     } catch (err) {
       this.logger.error(`Failed to send event invite email to ${email}`, err);
     }
+  }
+
+  async resolveEventByInviteToken(token: string) {
+    const event = await this.prisma.event.findFirst({
+      where: { inviteToken: token, deletedAt: null },
+      select: { id: true, name: true, type: true, description: true, status: true },
+    });
+    if (!event) {
+      throw new NotFoundException('Link mời không hợp lệ hoặc đã hết hạn');
+    }
+    return event;
+  }
+
+  async joinByEventToken(token: string, userId: string) {
+    const event = await this.prisma.event.findFirst({
+      where: { inviteToken: token, deletedAt: null },
+      select: { id: true },
+    });
+    if (!event) {
+      throw new NotFoundException('Link mời không hợp lệ hoặc đã hết hạn');
+    }
+    return this.joinEvent(event.id, userId, { token });
+  }
+
+  async acceptInvitationByMemberToken(token: string, userId: string) {
+    const member = await this.prisma.eventMember.findFirst({
+      where: { inviteToken: token },
+      select: { eventId: true },
+    });
+    if (!member) {
+      throw new NotFoundException('Lời mời không hợp lệ hoặc đã được sử dụng');
+    }
+    return this.acceptInvitation(member.eventId, userId, token);
   }
 
   async createEvent(userId: string, dto: CreateEventDto) {

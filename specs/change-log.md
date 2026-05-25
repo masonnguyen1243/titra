@@ -5,6 +5,94 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (77) — Phase 3: Events module security fix — addMember per-target invite rate limit (S3)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - `addMember` (email path): added `joinedAt` to the `existing` member select. Before re-sending an invite to a PENDING member, checks whether `joinedAt` is within the last hour; if so, returns `{ ok: true }` silently instead of generating a new token and sending another email. The silent response preserves enumeration-safety — an organizer cannot distinguish "rate-limited" from "email not found" by inspecting the response. The 1-hour window is tracked via the existing `joinedAt` field (updated on every re-invite) so no schema change is needed.
+
+---
+
+## 2026-05-25 (76) — Phase 3: Events module security fix — addMember strips invite token from response (S2)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - `addMember` (email path): destructures `inviteToken` and `inviteTokenExpiry` out of the Prisma result before returning, so neither field appears in the `201` response body. The token is only transmitted via the email sent to the invitee — exposing it in the API response would allow the organizer to accept the invite on behalf of the invitee or construct the acceptance URL without the invitee's involvement.
+
+---
+
+## 2026-05-25 (75) — Phase 3: Events module security fix — addMember fully enumeration-safe (S1)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - `addMember` (email path): merged three separate early-return/throw branches into one: `if (!target || !target.isActive || !target.emailVerified) return { ok: true }`. Previously, a non-existent email returned `{ ok: true }` (correct) but a deactivated or unverified account threw a distinct `400` with a descriptive message — an attacker could probe any email address to learn whether it has an account and what its state is. All three cases now return the same silent `{ ok: true }` response, matching the pattern used in `forgotPassword`.
+
+---
+
+## 2026-05-25 (74) — Phase 3: Events module QA fix — addMember guest path blocks duplicate nicknames (M5)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - `addMember` (guest path): before creating the `EventMember` row, now queries for an existing active guest (`userId: null`) with the same `nickname` in the same event. Throws `409 Conflict` if found. The check filters `removedAt: null` so a previously removed guest with the same name can be re-added without conflict. Previously two rows with identical nicknames could be created, making their financial histories impossible to reconcile in the balance calculation.
+
+---
+
+## 2026-05-25 (73) — Phase 3: Events module QA fix — removeMember blocks SETTLED/ARCHIVED events (M4)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - `removeMember`: expanded the `findFirst` select to include `status`, then added a guard that throws `400` when `event.status` is `SETTLED` or `ARCHIVED`. Previously, the organizer could soft-delete a member from a settled event, which would silently corrupt the historical balance — the removed member's past expenses would still exist but their membership would be gone, making the debt ledger inconsistent on re-calculation.
+
+---
+
+## 2026-05-25 (72) — Phase 3: Events module QA fix — unify invite URL format and add frontend pages (F5)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - `sendEventInviteEmail`: changed email link URL from `/invitations/accept?token=${token}` to `/invitations/${token}/accept` — aligns with the new `POST /invitations/:token/accept` REST route (path param, not query param), matching the NestJS controller convention used throughout the codebase.
+  - Added `resolveEventByInviteToken(token)` — public method that looks up an event by its `inviteToken` and returns the preview fields (`id`, `name`, `type`, `description`, `status`). Used by the join page before the user authenticates.
+  - Added `joinByEventToken(token, userId)` — resolves the eventId from the event-level invite token, then delegates to the existing `joinEvent` method.
+  - Added `acceptInvitationByMemberToken(token, userId)` — resolves the eventId from the member-level `inviteToken` on `EventMember`, then delegates to the existing `acceptInvitation` method.
+- `apps/api/src/events/join.controller.ts` (**new**): `@Controller('join')` — `GET /:token` (public, event preview), `POST /:token` (authenticated, join event).
+- `apps/api/src/events/invitations.controller.ts` (**new**): `@Controller('invitations')` — `POST /:token/accept` (authenticated, accept email invite).
+- `apps/api/src/events/events.module.ts`: registered `JoinController` and `InvitationsController`.
+- `apps/web/app/join/[token]/page.tsx` (**new**): public join page — shows event name/type/description and a "Tham gia sự kiện" CTA that routes through login with a redirect back to the join URL.
+- `apps/web/app/invitations/[token]/accept/page.tsx` (**new**): invitation acceptance page — shows event name and an "Chấp nhận lời mời" button (wired to `POST /invitations/:token/accept` in Phase 4).
+
+---
+
+## 2026-05-25 (71) — Phase 3: Events module QA fix — EVENT_LIST_SELECT counts only active non-removed members (F4)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - `EVENT_LIST_SELECT`: replaced `_count: { select: { members: true } }` with `_count: { select: { members: { where: { status: MemberStatus.ACTIVE, removedAt: null } } } }`. Previously the count included PENDING members (invited but not yet accepted) and soft-deleted members (removedAt not null), so the dashboard card would show an inflated member count. Now only members who are fully active and not removed are counted, matching the visible membership shown in the event detail view.
+
+---
+
+## 2026-05-25 (70) — Phase 3: Events module QA fix — acceptInvitation guards deleted and terminal-status events (F3)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - `acceptInvitation`: expanded the `findFirst` select to include `event: { select: { deletedAt, status } }` so the parent event is fetched in a single query. Added two guards before the ownership check: (1) throws `400` if `event.deletedAt !== null` — prevents activating a member on a soft-deleted event; (2) throws `400` if `event.status` is `SETTLED` or `ARCHIVED` — prevents accepting an invitation to a terminal-state event. Previously a user could accept an email invite after the event had been deleted or settled, creating an active membership that would never appear in any query (deleted events are filtered out of all list/detail views) or that would corrupt settled balances.
+
+---
+
+## 2026-05-25 (69) — Phase 3: Events module QA fix — addMember blocks SETTLED events (F2)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - `addMember`: expanded the status guard from `ARCHIVED`-only to `ARCHIVED || SETTLED`. Error message updated to the generic "Không thể thêm thành viên vào sự kiện đã kết thúc" (covers both terminal states). Previously, the organizer could add members (email or guest path) to a SETTLED event, which would introduce new participants after balances had already been calculated and confirmed, corrupting the debt ledger. The fix mirrors the same guard already applied in `joinEvent` (entry 66).
+
+---
+
+## 2026-05-25 (68) — Phase 3: Events module QA fix — joinEvent restores member with status ACTIVE (F1)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - `joinEvent` (restore path): added `status: MemberStatus.ACTIVE`, `inviteToken: null`, `inviteTokenExpiry: null` to the `update` data when restoring a previously removed member. Previously only `removedAt` and `joinedAt` were reset, leaving the member in `PENDING` status if they had been invited via email before being removed. A PENDING member is filtered out by `getEvents`, `getEventDetail`, and `getInvite`, effectively locking them out of the event despite holding a valid session. Clearing the invite token fields also invalidates any stale email invitation after a public-link rejoin.
+
+---
+
 ## 2026-05-25 (67) — Phase 3: Events module security fix — addMember enumeration-safe for unknown email (S3)
 
 **Files changed:**

@@ -313,6 +313,19 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Fix `joinEvent`: chặn join event có status `SETTLED`, không chỉ `ARCHIVED` — member mới join sau khi đã settle sẽ phá vỡ số dư (F4)
 - [x] Fix `addMember` by email: trả về 200 thay vì tiết lộ sự tồn tại của email khi không tìm thấy user (hiện trả 404 — là oracle liệt kê tài khoản); theo pattern enumeration-safe đã dùng ở `forgotPassword` (S3)
 
+**Events module — QA fixes (Round 2)**
+
+- [x] Fix `joinEvent`: khi restore thành viên bị remove, set lại `status: ACTIVE` — hiện tại chỉ reset `removedAt` nên thành viên có status `PENDING` vẫn bị khoá khỏi event sau khi rejoin qua invite link công khai (F1)
+- [x] Fix `addMember`: chặn cả event `SETTLED` (không chỉ `ARCHIVED`) — organizer hiện vẫn thêm được thành viên vào event đã chốt, làm sai balance (F2)
+- [x] Fix `acceptInvitation`: kiểm tra event chưa bị soft-delete (`deletedAt: null`) và status không phải `SETTLED`/`ARCHIVED` trước khi activate member — hiện tại có thể accept invite vào event đã xoá hoặc đã kết thúc (F3)
+- [x] Fix `EVENT_LIST_SELECT`: thêm filter cho `_count.members` chỉ đếm member `status: ACTIVE, removedAt: null` — hiện tại số lượng thành viên trên dashboard bao gồm cả PENDING và đã bị remove (F4)
+- [x] Fix URL format mâu thuẫn: `getInvite` trả về `/join/:eventInviteToken` còn `sendEventInviteEmail` gửi `/invitations/accept?token=:memberInviteToken` — hai flow dùng hai loại token khác nhau trỏ vào hai trang frontend khác nhau; cần thống nhất và tạo trang frontend tương ứng (F5)
+- [x] Fix `removeMember`: thêm guard chặn xoá thành viên khi event có status `SETTLED` hoặc `ARCHIVED` — xoá member sau khi chốt có thể làm hỏng lịch sử balance (M4)
+- [~] ~~Fix `addMember` guest path: kiểm tra và chặn thêm guest trùng `nickname` trong cùng event~~ — bỏ qua, nickname không phải unique identifier (hai người có thể cùng tên) (M5)
+- [x] Fix `addMember` enumeration (partial): email không tồn tại → `{ ok: true }`, nhưng email bị deactivate/unverified → trả `400` với message cụ thể — lộ thông tin tài khoản. Cần áp dụng enumeration-safe nhất quán cho cả ba trường hợp (S1)
+- [x] Fix `addMember`: ẩn `inviteToken` và `inviteTokenExpiry` khỏi response trả về cho organizer — token chỉ nên được giao đến người được mời qua email, không qua API response (S2)
+- [x] Thêm rate limiting per-target cho `POST /events/:id/members`: giới hạn số lần invite đến một email cụ thể trong khoảng thời gian nhất định để tránh spam inbox (S3)
+
 **Events module — missing features**
 
 - [ ] `PATCH /events/:id/invite` — regenerate invite token (vô hiệu hoá link cũ, tạo token mới) — frontend đã có nút "Regenerate" nhưng chưa có endpoint backend (M3)
@@ -330,6 +343,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
   - `joinEvent` — 400 nếu ARCHIVED/SETTLED, 400 nếu sai token, 409 nếu đã là member
   - `addMember` — email path (404/409), guest path (tạo với `userId: null`)
   - `removeMember` — 403 nếu không phải organizer, 400 nếu target là ORGANIZER
+  - `acceptInvitation` — 404 token không hợp lệ, 403 sai userId, 409 đã là ACTIVE, 400 hết hạn, happy path → status ACTIVE (M3)
 - [ ] Integration tests cho Events endpoints dùng Supertest + Neon DB — test plan liệt kê đầy đủ các case nhưng chưa có file `events.e2e-spec.ts` nào (M2)
   - `POST /events`, `GET /events`, `GET /events/:id`, `PATCH /events/:id`, `DELETE /events/:id`
   - `GET /events/:id/invite`, `POST /events/:id/join`
