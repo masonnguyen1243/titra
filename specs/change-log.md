@@ -5,6 +5,22 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (47b) — Phase 3: Auth — resendVerification unit tests
+
+**Files changed:**
+- `apps/api/src/auth/auth.service.spec.ts`: Added `describe('resendVerification')` block with 4 unit tests matching the pattern used for `forgotPassword`: happy path (token generated, 24 h expiry verified), unknown email, inactive user, and already-verified user — all silent `{ ok: true }` without touching DB. Suite grows from 27 → 31 tests, all passing.
+
+---
+
+## 2026-05-25 (47) — Phase 3: Auth — POST /auth/resend-verification (M2)
+
+**Files changed:**
+- `apps/api/src/auth/dto/resend-verification.dto.ts`: New DTO with `@IsEmail()` on the `email` field.
+- `apps/api/src/auth/auth.service.ts`: Added `resendVerification(dto)`. Looks up user by email; silently returns `{ ok: true }` if the user doesn't exist, is inactive, or is already verified (enumeration-safe). Otherwise generates a fresh UUID token with a 24 h expiry, updates the DB, and calls `sendVerificationEmail()`.
+- `apps/api/src/auth/auth.controller.ts`: Added `POST /auth/resend-verification` (public, `200 OK`), delegating to `authService.resendVerification()`.
+
+---
+
 ## 2026-05-25 (46) — Phase 3: Auth — Google OAuth login via Passport (M1)
 
 **Files changed:**

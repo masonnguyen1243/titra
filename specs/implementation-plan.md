@@ -275,7 +275,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 **Auth module — missing features**
 
 - [x] `POST /auth/google` — Google OAuth login via Passport + `@nestjs/passport` strategy (M1)
-- [ ] `POST /auth/resend-verification` — resend email verification link; needed by the "Gửi lại email" button already in the frontend (M2)
+- [x] `POST /auth/resend-verification` — resend email verification link; needed by the "Gửi lại email" button already in the frontend (M2)
 - [ ] Refresh token rotation with invalidation: persist refresh token hash in DB, blacklist on use so stolen tokens cannot be replayed for the full 7-day window (M3)
 - [ ] Stricter per-endpoint rate limiting on `POST /auth/login` and `POST /auth/forgot-password` (e.g. 5 req/min per IP) separate from the global 60 req/min bucket (M9)
 

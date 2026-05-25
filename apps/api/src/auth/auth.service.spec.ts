@@ -421,6 +421,65 @@ describe('AuthService', () => {
     });
   });
 
+  describe('resendVerification', () => {
+    const activeUnverifiedUser = {
+      id: 'uuid-1',
+      name: 'Nguyen Van A',
+      email: 'test@example.com',
+      isActive: true,
+      emailVerified: false,
+    };
+
+    it('generates a new token, persists it, and returns { ok: true } for an unverified active user', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(activeUnverifiedUser);
+      mockPrisma.user.update.mockResolvedValue({});
+
+      const result = await service.resendVerification({ email: activeUnverifiedUser.email });
+
+      expect(result).toEqual({ ok: true });
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: activeUnverifiedUser.id },
+          data: expect.objectContaining({
+            verificationToken: expect.any(String),
+            verificationTokenExpiry: expect.any(Date),
+          }),
+        }),
+      );
+
+      const updateCall = mockPrisma.user.update.mock.calls[0][0];
+      const expiry: Date = updateCall.data.verificationTokenExpiry;
+      expect(expiry.getTime()).toBeGreaterThan(Date.now() + 23 * 60 * 60 * 1000);
+    });
+
+    it('returns { ok: true } without touching DB when email is not found (prevents enumeration)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      const result = await service.resendVerification({ email: 'nobody@example.com' });
+
+      expect(result).toEqual({ ok: true });
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('returns { ok: true } without touching DB when user is inactive (prevents enumeration)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ ...activeUnverifiedUser, isActive: false });
+
+      const result = await service.resendVerification({ email: activeUnverifiedUser.email });
+
+      expect(result).toEqual({ ok: true });
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('returns { ok: true } without touching DB when email is already verified', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ ...activeUnverifiedUser, emailVerified: true });
+
+      const result = await service.resendVerification({ email: activeUnverifiedUser.email });
+
+      expect(result).toEqual({ ok: true });
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('refresh', () => {
     const REFRESH_SECRET = 'test-refresh-secret';
     const ACCESS_SECRET = 'test-access-secret';

@@ -5,6 +5,7 @@ import { Public } from './decorators/public.decorator';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
@@ -49,6 +50,12 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
+  }
+
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  resendVerification(@Body() dto: ResendVerificationDto) {
+    return this.authService.resendVerification(dto);
   }
 
   @Post('reset-password')

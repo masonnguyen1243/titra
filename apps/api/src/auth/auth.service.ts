@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { GoogleProfile } from './strategies/google.strategy';
 
@@ -216,6 +217,32 @@ export class AuthService {
     });
 
     await this.sendPasswordResetEmail(user.email, user.name, resetToken);
+
+    return { ok: true };
+  }
+
+  async resendVerification(dto: ResendVerificationDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      select: { id: true, name: true, email: true, isActive: true, emailVerified: true },
+    });
+
+    // Always return ok to prevent user enumeration
+    if (!user || !user.isActive || user.emailVerified) {
+      return { ok: true };
+    }
+
+    const verificationToken = randomUUID();
+    const verificationTokenExpiry = new Date(
+      Date.now() + VERIFICATION_TOKEN_TTL_HOURS * 60 * 60 * 1000,
+    );
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { verificationToken, verificationTokenExpiry },
+    });
+
+    await this.sendVerificationEmail(user.email, user.name, verificationToken);
 
     return { ok: true };
   }
