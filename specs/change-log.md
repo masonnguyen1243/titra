@@ -5,6 +5,21 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (42) — Test fix: auth.service.spec.ts updated for F1 + F2
+
+**Issue:** After F1 and F2 changes, the test suite had 1 failure and 2 missing cases.
+
+**Failures fixed:**
+- `resetPassword` happy-path mock was missing `isActive: true` — the new guard caused it to throw 400. Fixed all `resetPassword` mocks to include `isActive`.
+
+**Missing tests added:**
+- `login()` with `isActive: false` → 401 and bcrypt **not called** (verifies F1 skips bcrypt for inactive accounts).
+- `resetPassword()` with `isActive: false` → 400 and `update` not called (verifies F2 blocks deactivated users).
+
+**Result:** 26 tests, all passing.
+
+---
+
 ## 2026-05-25 (41) — Phase 3: Auth QA fix — resetPassword() checks isActive (F2)
 
 **Files changed:**

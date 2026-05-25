@@ -189,6 +189,18 @@ describe('AuthService', () => {
 
       expect(res.cookie).not.toHaveBeenCalled();
     });
+
+    it('throws 401 UnauthorizedException and skips bcrypt when user is inactive (F1)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ ...verifiedUser, isActive: false });
+      const res = makeMockResponse();
+
+      await expect(
+        service.login({ email: verifiedUser.email, password: 'secret123' }, res),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(bcrypt.compare).not.toHaveBeenCalled();
+      expect(res.cookie).not.toHaveBeenCalled();
+    });
   });
 
   describe('verifyEmail', () => {
@@ -277,6 +289,7 @@ describe('AuthService', () => {
     it('hashes the new password, updates the user, and clears the reset token', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'uuid-1',
+        isActive: true,
         passwordResetExpiry: futureExpiry,
       });
       mockPrisma.user.update.mockResolvedValue({});
@@ -308,6 +321,7 @@ describe('AuthService', () => {
     it('throws 400 BadRequestException for an expired token', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'uuid-1',
+        isActive: true,
         passwordResetExpiry: pastExpiry,
       });
 
@@ -321,11 +335,26 @@ describe('AuthService', () => {
     it('throws 400 BadRequestException when passwordResetExpiry is null', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'uuid-1',
+        isActive: true,
         passwordResetExpiry: null,
       });
 
       await expect(
         service.resetPassword({ token: 'no-expiry-token', password: 'newpass123' }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('throws 400 BadRequestException when user is inactive (F2)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-1',
+        isActive: false,
+        passwordResetExpiry: futureExpiry,
+      });
+
+      await expect(
+        service.resetPassword({ token: 'valid-token-inactive-user', password: 'newpass123' }),
       ).rejects.toThrow(BadRequestException);
 
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
