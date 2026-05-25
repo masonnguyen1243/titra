@@ -334,7 +334,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Events module — unit & integration test gaps**
 
-- [ ] Unit tests cho `EventsService` — hiện tại không có file `events.service.spec.ts` nào, coverage = 0% trong khi test plan yêu cầu ≥ 80% cho mọi API service (M1)
+- [x] Unit tests cho `EventsService` — hiện tại không có file `events.service.spec.ts` nào, coverage = 0% trong khi test plan yêu cầu ≥ 80% cho mọi API service (M1)
   - `createEvent` — tạo event + organizer member trong transaction
   - `getEvents` — lọc theo membership, loại trừ soft-deleted
   - `getEventDetail` — 404 nếu không tìm thấy, 403 nếu không phải member
@@ -344,7 +344,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
   - `addMember` — email path (404/409), guest path (tạo với `userId: null`)
   - `removeMember` — 403 nếu không phải organizer, 400 nếu target là ORGANIZER
   - `acceptInvitation` — 404 token không hợp lệ, 403 sai userId, 409 đã là ACTIVE, 400 hết hạn, happy path → status ACTIVE (M3)
-- [ ] Integration tests cho Events endpoints dùng Supertest + Neon DB — test plan liệt kê đầy đủ các case nhưng chưa có file `events.e2e-spec.ts` nào (M2)
+- [x] Integration tests cho Events endpoints dùng Supertest + Neon DB — test plan liệt kê đầy đủ các case nhưng chưa có file `events.e2e-spec.ts` nào (M2)
   - `POST /events`, `GET /events`, `GET /events/:id`, `PATCH /events/:id`, `DELETE /events/:id`
   - `GET /events/:id/invite`, `POST /events/:id/join`
   - `POST /events/:id/members`, `DELETE /events/:id/members/:memberId`

@@ -5,6 +5,39 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (82) — Phase 3: Events module — integration tests for all Events endpoints (M2)
+
+**Files changed:**
+- `apps/api/test/events.e2e-spec.ts` (**new**): 43 integration tests against the live Neon DB via Supertest, following the same isolation strategy as `auth.e2e-spec.ts` (per-run `e2e-<timestamp>-` prefix; cleanup order: events before users due to `onDelete: Restrict` on `organizerId`).
+  - `POST /events`: 201 happy path (with optional fields), 401, 400 missing/empty name
+  - `GET /events`: returns only the caller's events, excludes soft-deleted events, 401
+  - `GET /events/:id`: 200 for member, 403 for non-member, 404, 401
+  - `PATCH /events/:id`: 200 organizer update, 403 non-organizer, 404, 401
+  - `DELETE /events/:id`: 204 soft-delete (verifies `deletedAt` set in DB), 403, 404, 401
+  - `GET /events/:id/invite`: 200 organizer, 403 non-organizer member, 401
+  - `POST /events/:id/join`: 201 happy path, 409 already member, 400 wrong token, 400 ARCHIVED (status set directly via DB to avoid 404 from soft-delete), 401
+  - `POST /events/:id/members`: 201 guest by name, guest `inviteToken` is null in response, 200 enumeration-safe for missing email, 201 creates PENDING member for verified user (verifies DB row), 409 already active, 403, 400 neither field, 401
+  - `DELETE /events/:id/members/:memberId`: 204 soft-delete (verifies `removedAt` in DB), 400 target is ORGANIZER, 403, 404, 401
+
+---
+
+## 2026-05-25 (81) — Phase 3: Events module — unit tests for EventsService (M1)
+
+**Files changed:**
+- `apps/api/src/events/events.service.spec.ts` (**new**): 44 unit tests covering all public methods of `EventsService` with a mocked `PrismaService`. Tests follow the same `jest.fn()` + `mockPrisma` pattern established in `auth.service.spec.ts`.
+  - `createEvent`: happy path (transaction creates event + organizer member), 404 when user doesn't exist
+  - `getEvents`: returns correct query shape (filters by membership + `deletedAt: null`)
+  - `getEventDetail`: happy path, 404 event not found, 403 caller not a member
+  - `updateEvent`: happy path, 404, 403 non-organizer
+  - `deleteEvent`: soft-delete (sets `deletedAt` + `status: ARCHIVED`), 404, 403
+  - `joinEvent`: creates new member, restores removed member, 404/400 ARCHIVED/400 SETTLED/400 bad token/409 already active
+  - `removeMember`: soft-delete, 404 event, 403 non-organizer, 400 SETTLED, 400 ARCHIVED, 404 member not found, 400 target is ORGANIZER
+  - `addMember` (email): PENDING member created, invite token stripped from response, enumeration-safe 200 for missing/inactive/unverified users, 409 already active, 403, 400 ARCHIVED/SETTLED
+  - `addMember` (guest): creates row with `userId: null`, 400 when neither email nor name provided
+  - `acceptInvitation`: activates + clears token, 404 bad token, 403 wrong user, 409 already active, 400 expired, 400 event deleted, 400 SETTLED, 400 ARCHIVED
+
+---
+
 ## 2026-05-25 (80) — Phase 3: Events missing feature — restrict GET /events/:id/invite to organizer (M5)
 
 **Files changed:**
