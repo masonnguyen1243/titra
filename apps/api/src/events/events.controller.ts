@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -29,6 +29,12 @@ export class EventsController {
     @Body() dto: UpdateEventDto,
   ) {
     return this.eventsService.updateEvent(id, user.sub, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteEvent(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.eventsService.deleteEvent(id, user.sub);
   }
 
   @Post()

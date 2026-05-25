@@ -5,6 +5,14 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (57) — Phase 3: Events module — DELETE /events/:id
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`: Added `deleteEvent(eventId, userId)` — fetches `organizerId` (404 if not found or already deleted); throws 403 if caller is not the organizer; sets `deletedAt = now()` and `status = ARCHIVED` (soft delete). Returns void; controller sends 204.
+- `apps/api/src/events/events.controller.ts`: Added `DELETE /events/:id` handler returning 204 No Content.
+
+---
+
 ## 2026-05-25 (56) — Phase 3: Events module — PATCH /events/:id
 
 **Files added:**
