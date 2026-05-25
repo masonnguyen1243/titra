@@ -5,6 +5,23 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (52) — Phase 3: Users module — GET /users/me + PATCH /users/me
+
+**Files added:**
+- `apps/api/src/users/dto/update-profile.dto.ts`: `UpdateProfileDto` with optional `name` (`@IsString @MinLength(1) @MaxLength(100)`) and `avatarUrl` (`@IsUrl`) fields. Both are fully optional so callers can patch just one field at a time.
+- `apps/api/src/users/users.service.ts`: `UsersService` with two methods:
+  - `getMe(userId)` — fetches `id`, `email`, `name`, `avatarUrl`, `role`, `emailVerified`, `createdAt` for the authenticated user; throws 404 if the user no longer exists.
+  - `updateMe(userId, dto)` — verifies the user exists (404 if not), then updates only the fields present in the DTO using conditional spread to avoid overwriting unset fields with `undefined`; returns the same safe field set.
+- `apps/api/src/users/users.controller.ts`: `UsersController` at path `users`, protected by the global `JwtAuthGuard`. Uses `@CurrentUser()` to extract the JWT payload (`sub` = user ID) for both handlers.
+  - `GET /users/me` → delegates to `usersService.getMe`.
+  - `PATCH /users/me` → delegates to `usersService.updateMe`.
+- `apps/api/src/users/users.module.ts`: NestJS module wiring `UsersController` and `UsersService`. `PrismaModule` is global so no explicit import needed.
+
+**Files changed:**
+- `apps/api/src/app.module.ts`: Added `UsersModule` to the `imports` array.
+
+---
+
 ## 2026-05-25 (51) — Phase 3: Auth — Integration tests with Supertest + Neon DB (M10)
 
 **Files added:**

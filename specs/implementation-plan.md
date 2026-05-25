@@ -289,8 +289,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Users module**
 
-- [ ] `GET /users/me` — return current user profile
-- [ ] `PATCH /users/me` — update name and avatar
+- [x] `GET /users/me` — return current user profile
+- [x] `PATCH /users/me` — update name and avatar
 
 **Events module**
 
