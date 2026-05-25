@@ -5,6 +5,17 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (60) — Phase 3: Events module — POST /events/:id/members
+
+**Files added:**
+- `apps/api/src/events/dto/add-member.dto.ts`: `AddMemberDto` with optional `email` (validated as email format) and `name` (max 100 chars, required via `@ValidateIf` when `email` is absent). Service also guards against both fields being missing.
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`: Added `addMember(eventId, callerId, dto)` — 404 if event not found/deleted; 403 if caller is not the organizer; 400 if event is ARCHIVED. **Email path**: looks up user by email (404 if not found), checks for existing membership (409 if duplicate), creates `EventMember` with the user's id and name. **Guest path**: creates `EventMember` with `userId: null` and the provided `name` as nickname; multiple guests allowed because PostgreSQL's unique constraint treats NULL ≠ NULL.
+- `apps/api/src/events/events.controller.ts`: Added `POST /events/:id/members` handler returning 201 Created.
+
+---
+
 ## 2026-05-25 (59) — Phase 3: Events module — POST /events/:id/join
 
 **Files added:**

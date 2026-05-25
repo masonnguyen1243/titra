@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EventStatus, MemberRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AddMemberDto } from './dto/add-member.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { JoinEventDto } from './dto/join-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -174,6 +175,58 @@ export class EventsService {
         nickname: user.name,
         role: MemberRole.MEMBER,
       },
+    });
+  }
+
+  async addMember(eventId: string, callerId: string, dto: AddMemberDto) {
+    if (!dto.email && !dto.name) {
+      throw new BadRequestException('Cần cung cấp email hoặc tên khách');
+    }
+
+    const event = await this.prisma.event.findFirst({
+      where: { id: eventId, deletedAt: null },
+      select: { organizerId: true, status: true },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Sự kiện không tồn tại');
+    }
+
+    if (event.organizerId !== callerId) {
+      throw new ForbiddenException('Chỉ ban tổ chức mới có thể thêm thành viên');
+    }
+
+    if (event.status === EventStatus.ARCHIVED) {
+      throw new BadRequestException('Không thể thêm thành viên vào sự kiện đã lưu trữ');
+    }
+
+    if (dto.email) {
+      const target = await this.prisma.user.findUnique({
+        where: { email: dto.email },
+        select: { id: true, name: true },
+      });
+
+      if (!target) {
+        throw new NotFoundException('Không tìm thấy người dùng với email này');
+      }
+
+      const existing = await this.prisma.eventMember.findUnique({
+        where: { eventId_userId: { eventId, userId: target.id } },
+        select: { id: true },
+      });
+
+      if (existing) {
+        throw new ConflictException('Người dùng này đã là thành viên của sự kiện');
+      }
+
+      return this.prisma.eventMember.create({
+        data: { eventId, userId: target.id, nickname: target.name, role: MemberRole.MEMBER },
+      });
+    }
+
+    // Guest path: userId is null, nickname is the provided name
+    return this.prisma.eventMember.create({
+      data: { eventId, userId: null, nickname: dto.name!, role: MemberRole.MEMBER },
     });
   }
 

@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
+import { AddMemberDto } from './dto/add-member.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { JoinEventDto } from './dto/join-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -26,6 +27,16 @@ export class EventsController {
   @HttpCode(HttpStatus.OK)
   getInvite(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.eventsService.getInvite(id, user.sub);
+  }
+
+  @Post(':id/members')
+  @HttpCode(HttpStatus.CREATED)
+  addMember(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: AddMemberDto,
+  ) {
+    return this.eventsService.addMember(id, user.sub, dto);
   }
 
   @Post(':id/join')
