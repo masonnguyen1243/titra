@@ -79,8 +79,9 @@ model User {
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 
-  eventMembers   EventMember[]
-  refreshTokens  RefreshToken[]
+  eventMembers    EventMember[]
+  refreshTokens   RefreshToken[]
+  organizedEvents Event[]
 
   @@map("users")
 }
@@ -112,6 +113,7 @@ model Event {
   updatedAt     DateTime    @updatedAt
   deletedAt     DateTime?
 
+  organizer   User          @relation(fields: [organizerId], references: [id], onDelete: Restrict)
   members     EventMember[]
   expenses    Expense[]
   settlements Settlement[]

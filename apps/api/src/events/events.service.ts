@@ -79,24 +79,48 @@ export class EventsService {
   async getInvite(eventId: string, userId: string) {
     const event = await this.prisma.event.findFirst({
       where: { id: eventId, deletedAt: null },
-      select: {
-        inviteToken: true,
-        members: { where: { userId, status: MemberStatus.ACTIVE, removedAt: null }, select: { id: true } },
-      },
+      select: { inviteToken: true, organizerId: true },
     });
 
     if (!event) {
       throw new NotFoundException('Sự kiện không tồn tại');
     }
 
-    if (event.members.length === 0) {
-      throw new ForbiddenException('Bạn không phải thành viên của sự kiện này');
+    if (event.organizerId !== userId) {
+      throw new ForbiddenException('Chỉ ban tổ chức mới có thể xem link mời');
     }
 
     const appUrl = process.env['NEXT_PUBLIC_APP_URL'] ?? 'http://localhost:3000';
     return {
       inviteToken: event.inviteToken,
       inviteUrl: `${appUrl}/join/${event.inviteToken}`,
+    };
+  }
+
+  async regenerateInviteToken(eventId: string, userId: string) {
+    const event = await this.prisma.event.findFirst({
+      where: { id: eventId, deletedAt: null },
+      select: { organizerId: true },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Sự kiện không tồn tại');
+    }
+
+    if (event.organizerId !== userId) {
+      throw new ForbiddenException('Chỉ ban tổ chức mới có thể tạo lại link mời');
+    }
+
+    const updated = await this.prisma.event.update({
+      where: { id: eventId },
+      data: { inviteToken: randomUUID() },
+      select: { inviteToken: true },
+    });
+
+    const appUrl = process.env['NEXT_PUBLIC_APP_URL'] ?? 'http://localhost:3000';
+    return {
+      inviteToken: updated.inviteToken,
+      inviteUrl: `${appUrl}/join/${updated.inviteToken}`,
     };
   }
 

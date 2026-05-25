@@ -29,6 +29,12 @@ export class EventsController {
     return this.eventsService.getInvite(id, user.sub);
   }
 
+  @Patch(':id/invite')
+  @HttpCode(HttpStatus.OK)
+  regenerateInviteToken(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.eventsService.regenerateInviteToken(id, user.sub);
+  }
+
   @Delete(':id/members/:memberId')
   @HttpCode(HttpStatus.NO_CONTENT)
   removeMember(

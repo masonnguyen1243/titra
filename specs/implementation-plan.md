@@ -328,9 +328,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Events module — missing features**
 
-- [ ] `PATCH /events/:id/invite` — regenerate invite token (vô hiệu hoá link cũ, tạo token mới) — frontend đã có nút "Regenerate" nhưng chưa có endpoint backend (M3)
-- [ ] Thêm FK từ `Event.organizerId` → `User` vào Prisma schema — hiện tại chỉ là `String` thuần, không có `@relation`; nếu user bị xoá sẽ tạo orphaned reference (M4)
-- [ ] Làm rõ hoặc restrict `GET /events/:id/invite`: spec §5.2 nói organizer chia sẻ invite link; hiện tại mọi member đều gọi được endpoint này (M5)
+- [x] `PATCH /events/:id/invite` — regenerate invite token (vô hiệu hoá link cũ, tạo token mới) — frontend đã có nút "Regenerate" nhưng chưa có endpoint backend (M3)
+- [x] Thêm FK từ `Event.organizerId` → `User` vào Prisma schema — hiện tại chỉ là `String` thuần, không có `@relation`; nếu user bị xoá sẽ tạo orphaned reference (M4)
+- [x] Làm rõ hoặc restrict `GET /events/:id/invite`: spec §5.2 nói organizer chia sẻ invite link; hiện tại mọi member đều gọi được endpoint này (M5)
 
 **Events module — unit & integration test gaps**
 

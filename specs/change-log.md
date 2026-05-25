@@ -5,6 +5,34 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (80) — Phase 3: Events missing feature — restrict GET /events/:id/invite to organizer (M5)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - `getInvite`: replaced the membership check (`members: { where: { userId } }`) with an organizer check (`event.organizerId !== userId → 403`). The select now fetches `organizerId` instead of the members array. Non-organizer members calling `GET /events/:id/invite` now receive `403 Chỉ ban tổ chức mới có thể xem link mời`. Regular members can still join via the link after the organizer shares it out-of-band; they don't need API access to the token itself.
+
+---
+
+## 2026-05-25 (79) — Phase 3: Events missing feature — FK from Event.organizerId → User (M4)
+
+**Files changed:**
+- `apps/api/prisma/schema.prisma`:
+  - `Event` model: added `organizer User @relation(fields: [organizerId], references: [id], onDelete: Restrict)`. `Restrict` prevents deleting a user who is the organizer of any event — the admin must archive/transfer the event first. Previously `organizerId` was a bare `String` with no DB-level enforcement, so deleting a user could silently orphan all their events.
+  - `User` model: added `organizedEvents Event[]` (the inverse side of the relation, required by Prisma).
+- `apps/api/prisma/migrations/20260525_add_event_organizer_fk/migration.sql` (**new**): `ALTER TABLE "events" ADD CONSTRAINT "events_organizerId_fkey" FOREIGN KEY ("organizerId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE`. Applied via `db push` (Neon pooler blocks shadow-DB creation) then recorded with `prisma migrate resolve --applied`.
+
+---
+
+## 2026-05-25 (78) — Phase 3: Events missing feature — PATCH /events/:id/invite regenerates public invite token (M3)
+
+**Files changed:**
+- `apps/api/src/events/events.service.ts`:
+  - Added `regenerateInviteToken(eventId, userId)`: verifies the caller is the organizer, then replaces `event.inviteToken` with a fresh `randomUUID()`. Returns `{ inviteToken, inviteUrl }` in the same shape as `getInvite`. The old token is immediately invalidated — any existing `/join/:oldToken` links stop working as soon as the DB is updated.
+- `apps/api/src/events/events.controller.ts`:
+  - Added `PATCH /events/:id/invite` → `regenerateInviteToken`. No request body needed.
+
+---
+
 ## 2026-05-25 (77) — Phase 3: Events module security fix — addMember per-target invite rate limit (S3)
 
 **Files changed:**
