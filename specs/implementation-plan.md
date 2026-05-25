@@ -356,7 +356,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] `PATCH /events/:id/expenses/:expenseId` — edit expense (creator or organizer)
 - [x] `DELETE /events/:id/expenses/:expenseId` — soft delete (creator or organizer)
 - [x] `GET /events/:id/balances` — run debt simplification algorithm, return results
-- [ ] Balance calculation service (unit tested independently)
+- [x] Balance calculation service (unit tested independently)
 - [ ] Cloudinary upload service (receipt photos)
 
 **Settlements module**

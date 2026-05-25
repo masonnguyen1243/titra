@@ -5,6 +5,13 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (88) — Phase 3: Expenses module — Balance calculation service unit tests
+
+**Files changed:**
+- `apps/api/src/expenses/balance.service.spec.ts` (**new**): 14 unit tests covering `simplifyDebts()` and `BalanceService.compute()` — no DB mocking needed (pure functions). Cases: empty input, all-zero nets, creditor-only/debtor-only (no settlements), exact 1-to-1 match, partial creditor match, classic 3-way equal split, 3-debtor-2-creditor minimisation, members with net = 0 excluded, large VND integers, nickname propagation; plus 3 `BalanceService` wrapper tests.
+
+---
+
 ## 2026-05-25 (87) — Phase 3: Expenses module — GET /events/:id/balances (debt simplification)
 
 **Files changed:**
