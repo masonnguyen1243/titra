@@ -277,14 +277,14 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] `POST /auth/google` — Google OAuth login via Passport + `@nestjs/passport` strategy (M1)
 - [x] `POST /auth/resend-verification` — resend email verification link; needed by the "Gửi lại email" button already in the frontend (M2)
 - [x] Refresh token rotation with invalidation: persist refresh token hash in DB, blacklist on use so stolen tokens cannot be replayed for the full 7-day window (M3)
-- [ ] Stricter per-endpoint rate limiting on `POST /auth/login` and `POST /auth/forgot-password` (e.g. 5 req/min per IP) separate from the global 60 req/min bucket (M9)
+- [x] Stricter per-endpoint rate limiting on `POST /auth/login` and `POST /auth/forgot-password` (e.g. 5 req/min per IP) separate from the global 60 req/min bucket (M9)
 
 **Auth module — unit & integration test gaps**
 
-- [ ] Unit test: `login()` with `isActive: false` → 401 (M4)
-- [ ] Unit test: `refresh()` with expired token (correct secret, `exp` in past) → 401 (M5)
-- [ ] Unit test: `refresh()` with inactive user → 401 (M6)
-- [ ] Unit test: `refresh()` with unverified user → 401 (M6)
+- [x] Unit test: `login()` with `isActive: false` → 401 (M4)
+- [x] Unit test: `refresh()` with expired token (correct secret, `exp` in past) → 401 (M5)
+- [x] Unit test: `refresh()` with inactive user → 401 (M6)
+- [x] Unit test: `refresh()` with unverified user → 401 (M6)
 - [ ] Integration tests for all auth endpoints (`register`, `login`, `refresh`, `logout`, `verify-email`, `forgot-password`, `reset-password`) using Supertest + testcontainers (M10)
 
 **Users module**

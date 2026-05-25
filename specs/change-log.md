@@ -5,6 +5,19 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (50) — Phase 3: Auth — Unit test gaps closed (M5, M6)
+
+**Files changed:**
+- `apps/api/src/auth/auth.service.spec.ts`: Added 3 missing unit tests to the `refresh` describe block:
+  - `throws 401 when refresh token is expired (correct secret, exp in past)` (M5) — signs a JWT with `exp` set 60 s in the past; `verify()` throws `TokenExpiredError`, caught and rethrown as 401.
+  - `throws 401 when user is inactive` (M6) — valid token, user returned with `isActive: false`; guard rejects before reaching the refreshToken DB check.
+  - `throws 401 when user email is not verified` (M6) — valid token, user returned with `emailVerified: false`; same guard path.
+- Total tests: 32 → 35, all passing.
+
+**Also:** Marked M4, M5, M6, and M9 as `[x]` in `specs/implementation-plan.md` — M4 was already covered by the F1 test, M9 was done in entry 49 but the checkbox was not updated.
+
+---
+
 ## 2026-05-25 (49) — Phase 3: Auth — Stricter rate limiting on login & forgot-password (M9)
 
 **Files changed:**

@@ -577,5 +577,46 @@ describe('AuthService', () => {
 
       await expect(service.refresh(makeRequest(token), res)).rejects.toThrow(UnauthorizedException);
     });
+
+    it('throws 401 when refresh token is expired (correct secret, exp in past) (M5)', async () => {
+      // Sign with exp already in the past — verify() will throw TokenExpiredError
+      const expiredToken = jwtService.sign(
+        {
+          sub: activeUser.id,
+          email: activeUser.email,
+          role: activeUser.role,
+          exp: Math.floor(Date.now() / 1000) - 60,
+        },
+        { secret: REFRESH_SECRET },
+      );
+      const res = makeMockResponse();
+
+      await expect(service.refresh(makeRequest(expiredToken), res)).rejects.toThrow(UnauthorizedException);
+      expect(res.cookie).not.toHaveBeenCalled();
+    });
+
+    it('throws 401 when user is inactive (M6)', async () => {
+      const token = jwtService.sign(
+        { sub: activeUser.id, email: activeUser.email, role: activeUser.role },
+        { secret: REFRESH_SECRET, expiresIn: '7d' },
+      );
+      mockPrisma.user.findUnique.mockResolvedValue({ ...activeUser, isActive: false });
+      const res = makeMockResponse();
+
+      await expect(service.refresh(makeRequest(token), res)).rejects.toThrow(UnauthorizedException);
+      expect(res.cookie).not.toHaveBeenCalled();
+    });
+
+    it('throws 401 when user email is not verified (M6)', async () => {
+      const token = jwtService.sign(
+        { sub: activeUser.id, email: activeUser.email, role: activeUser.role },
+        { secret: REFRESH_SECRET, expiresIn: '7d' },
+      );
+      mockPrisma.user.findUnique.mockResolvedValue({ ...activeUser, emailVerified: false });
+      const res = makeMockResponse();
+
+      await expect(service.refresh(makeRequest(token), res)).rejects.toThrow(UnauthorizedException);
+      expect(res.cookie).not.toHaveBeenCalled();
+    });
   });
 });
