@@ -267,7 +267,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 **Auth module — QA fixes**
 
 - [x] Fix `login()`: check `isActive` before bcrypt compare — current order leaks account status via distinct error messages (F1)
-- [ ] Fix `resetPassword()`: verify `isActive` before accepting reset token — deactivated user can currently reset password within the 1h TTL window (F2)
+- [x] Fix `resetPassword()`: verify `isActive` before accepting reset token — deactivated user can currently reset password within the 1h TTL window (F2)
 - [ ] Fix `GET /auth/health`: return HTTP 503 when `status` is `"degraded"` so load balancers detect the degraded state (F3)
 - [ ] Fix `forgotPassword()`: skip token generation when `emailVerified` is `false` — currently issues reset email for unverified accounts (M11)
 - [ ] Add `@IsNotEmpty` to `name` field in `RegisterDto` — empty string is currently accepted (M7)

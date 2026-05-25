@@ -5,6 +5,14 @@ Format: `[YYYY-MM-DD] [Phase] Description`
 
 ---
 
+## 2026-05-25 (41) — Phase 3: Auth QA fix — resetPassword() checks isActive (F2)
+
+**Files changed:**
+- `apps/api/src/auth/auth.service.ts`: Added `isActive` to the `select` in `resetPassword()`. Combined the existence + active check into a single guard: `if (!user || !user.isActive)` returns the generic 400 "Liên kết đặt lại mật khẩu không hợp lệ". Previously, a deactivated user could still consume a valid reset token issued before deactivation and regain account access within the 1h TTL window.
+- Ran `npx prisma generate` to resolve a stale Prisma client that did not expose `passwordResetExpiry` in `UserSelect`.
+
+---
+
 ## 2026-05-25 (40) — Phase 3: Auth QA fix — login() checks isActive before bcrypt (F1)
 
 **Files changed:**

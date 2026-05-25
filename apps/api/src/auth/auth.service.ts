@@ -168,10 +168,10 @@ export class AuthService {
   async resetPassword(dto: ResetPasswordDto) {
     const user = await this.prisma.user.findUnique({
       where: { passwordResetToken: dto.token },
-      select: { id: true, passwordResetExpiry: true },
+      select: { id: true, isActive: true, passwordResetExpiry: true },
     });
 
-    if (!user) {
+    if (!user || !user.isActive) {
       throw new BadRequestException('Liên kết đặt lại mật khẩu không hợp lệ');
     }
 
