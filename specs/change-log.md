@@ -1,5 +1,43 @@
 # Change Log — Titra
 
+## 2026-05-26 (127) — Phase 4: Typed domain hooks
+
+**Files changed:**
+- `apps/web/lib/hooks/use-auth.ts` *(new)*: `useLogin`, `useRegister`, `useForgotPassword`, `useLogout` — all `useMutation` wrappers over `api.post`.
+- `apps/web/lib/hooks/use-user.ts` *(new)*: `useMe` (query), `useUpdateMe` (mutation with cache write-back); exports `UserProfile` type.
+- `apps/web/lib/hooks/use-events.ts` *(new)*: `useEvents`, `useEventDetail`, `useInviteLink` (queries); `useCreateEvent`, `useUpdateEvent`, `useDeleteEvent`, `useRegenerateInvite`, `useJoinEvent`, `useAddMember`, `useRemoveMember` (mutations). Exports `EventListItem`, `EventDetail`, `EventMember` types. Invalidates related queries on mutation success.
+- `apps/web/lib/hooks/use-expenses.ts` *(new)*: `useExpenses` (query); `useCreateExpense`, `useUpdateExpense`, `useDeleteExpense` (mutations). Expense mutations also invalidate the balances query since amounts affect net positions.
+- `apps/web/lib/hooks/use-balances.ts` *(new)*: `useBalances` (query). Exports `BalanceResult`, `MemberBalance`, `SettlementSuggestion` types.
+- `apps/web/lib/hooks/use-settlements.ts` *(new)*: `useSettlements` (query); `useCreateSettlement`, `useConfirmSettlement`, `useDeleteSettlement` (mutations). `confirmSettlement` also invalidates balances (confirmed settlements change net positions).
+- `apps/web/lib/hooks/use-messages.ts` *(new)*: `useMessages` (query with optional cursor), `useSendMessage` (mutation).
+- `apps/web/lib/hooks/use-notifications.ts` *(new)*: `useSendReminder` mutation.
+- `apps/web/lib/hooks/use-export.ts` *(new)*: `useExportPdf` mutation returning `{ url: string }`.
+- `apps/web/lib/hooks/use-admin.ts` *(new)*: `useAdminStats`, `useAdminUsers`, `useAdminEvents` (queries with pagination params); `useUpdateUserStatus`, `useArchiveEvent` (mutations). Exports `AdminStats`, `AdminUser`, `AdminEventItem`, `Paginated<T>` types.
+
+---
+
+## 2026-05-26 (126) — Phase 4: TanStack Query provider
+
+**Files changed:**
+- `apps/web/components/providers/query-provider.tsx` *(new)*: `'use client'` wrapper around `QueryClientProvider`. Creates the `QueryClient` inside a `useState` initialiser so each browser session gets exactly one client instance (avoids the shared-singleton pitfall with SSR). Default options: `staleTime: 30s`, `retry: 1`.
+- `apps/web/app/layout.tsx`: Wraps `{children}` and `<Toaster />` with `<QueryProvider>` so every page in the app has access to the query context.
+- `apps/web/package.json`: Added `@tanstack/react-query@^5`.
+
+---
+
+## 2026-05-26 (125) — Phase 4: Typed fetch wrapper (api.ts)
+
+**Files changed:**
+- `apps/web/lib/api.ts` *(new)*: Typed fetch wrapper for all client-side API calls. Features:
+  - Prepends `NEXT_PUBLIC_API_URL/api/v1` to every request path.
+  - Sends `credentials: 'include'` so HttpOnly JWT cookies are forwarded automatically.
+  - On 401, calls `POST /auth/refresh` once and retries the original request.
+  - On repeated 401 (refresh also fails), redirects to `/login` (client-side only).
+  - Throws `ApiError` (with `.status` and `.data` fields) for all non-2xx responses.
+  - Exports `api.get`, `api.post`, `api.patch`, `api.delete` — all fully generic.
+
+---
+
 ## 2026-05-26 (124) — Admin module integration tests + e2e ESM fix
 
 **Files changed:**

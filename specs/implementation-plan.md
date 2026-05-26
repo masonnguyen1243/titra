@@ -480,9 +480,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **API client setup**
 
-- [ ] Create typed fetch wrapper in `apps/web/lib/api.ts` (attaches JWT, handles 401 refresh)
-- [ ] Configure TanStack Query provider in the app root
-- [ ] Define typed query/mutation hooks per domain in `apps/web/lib/hooks/`
+- [x] Create typed fetch wrapper in `apps/web/lib/api.ts` (attaches JWT, handles 401 refresh)
+- [x] Configure TanStack Query provider in the app root
+- [x] Define typed query/mutation hooks per domain in `apps/web/lib/hooks/`
 
 **Auth**
 
