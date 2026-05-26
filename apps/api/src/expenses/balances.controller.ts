@@ -1,5 +1,5 @@
 import { Controller, ForbiddenException, Get, HttpCode, HttpStatus, NotFoundException, Param } from '@nestjs/common';
-import { MemberStatus } from '@prisma/client';
+import { MemberStatus, SettlementStatus } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
 import { PrismaService } from '../prisma/prisma.service';
@@ -32,6 +32,14 @@ export class BalancesController {
               where: { expense: { deletedAt: null } },
               select: { amount: true },
             },
+            sentSettlements: {
+              where: { status: SettlementStatus.CONFIRMED },
+              select: { amount: true },
+            },
+            receivedSettlements: {
+              where: { status: SettlementStatus.CONFIRMED },
+              select: { amount: true },
+            },
           },
         },
       },
@@ -49,11 +57,13 @@ export class BalancesController {
     const memberBalances: MemberBalance[] = event.members.map((m) => {
       const totalPaid = m.paidExpenses.reduce((sum, e) => sum + e.amount, 0);
       const totalOwed = m.expenseSplits.reduce((sum, s) => sum + s.amount, 0);
+      const totalSettlementsPaid = m.sentSettlements.reduce((sum, s) => sum + s.amount, 0);
+      const totalSettlementsReceived = m.receivedSettlements.reduce((sum, s) => sum + s.amount, 0);
       return {
         memberId: m.id,
         nickname: m.nickname,
         userId: m.userId,
-        net: totalPaid - totalOwed,
+        net: totalPaid - totalOwed + totalSettlementsPaid - totalSettlementsReceived,
       };
     });
 

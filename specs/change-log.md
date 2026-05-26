@@ -1,5 +1,14 @@
 # Change Log — Titra
 
+## 2026-05-26 (92) — Phase 3: Fix balance calculation to include confirmed settlements (F1)
+
+**Problem:** `GET /events/:id/balances` ignored confirmed settlements, so balances remained unchanged after a settlement was confirmed. Violated spec §5.4 and §5.5.
+
+**Files changed:**
+- `apps/api/src/expenses/balances.controller.ts`: added `sentSettlements` and `receivedSettlements` (filtered to `status: CONFIRMED`) to the Prisma member select. Net balance now computed as `totalExpensesPaid − totalExpenseSplitsOwed + totalSettlementsPaid − totalSettlementsReceived`. Both relations already existed on `EventMember` in the Prisma schema.
+
+---
+
 ## 2026-05-26 (91) — Phase 3: Notifications module
 
 **Files added:**

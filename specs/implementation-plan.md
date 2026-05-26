@@ -368,11 +368,42 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] MoMo deep-link generator utility
 - [x] VNPay deep-link generator utility
 
+**Settlements module — QA fixes**
+
+- [x] Fix balance calculation: `GET /events/:id/balances` không đưa confirmed settlements vào tính toán — sau khi confirm settlement, balance page vẫn hiển thị số dư cũ vì `balances.controller.ts` chỉ load `paidExpenses` và `expenseSplits`. Vi phạm spec §5.4 và §5.5. Cần load CONFIRMED settlements per member và trừ amount vào net (F1)
+- [ ] Fix `deleteSettlement`: người nhận tiền (recipient) không thể reject — hiện tại chỉ payer hoặc organizer mới được xoá, trong khi spec §5.5 nói "organizer or recipient can reject". Cần thêm check `settlement.toMember.userId === callerId` (F2)
+- [ ] Fix `confirmSettlement`: gửi email thông báo cho organizer khi settlement được confirm — spec §5.5 yêu cầu "On confirmation, the organizer receives an email notification"; hiện tại service không lookup organizer và không gửi email (F3)
+- [ ] Fix `confirmSettlement`: thêm guard chặn SETTLED/ARCHIVED event — `createSettlement` có guard này nhưng `confirmSettlement` thì không (M4)
+- [ ] Fix `createSettlement`: kiểm tra `status: MemberStatus.ACTIVE` cho `fromMemberId` và `toMemberId` — hiện chỉ lọc `removedAt: null`, cho phép PENDING member là bên trong settlement (M2)
+- [ ] Xác nhận `Settlement.method` có DB-level default CASH trong Prisma schema — DTO đánh dấu `@IsOptional()` nhưng Prisma create không set default tường minh; nếu schema thiếu default thì method sẽ là null (M3)
+- [ ] Fix deep-link generator: encode `phone` và `bankAccount` qua `encodeURIComponent` — số điện thoại dạng `+84912...` làm URL không hợp lệ, app MoMo/VNPay không parse được (S2)
+
+**Settlements module — unit & integration test gaps**
+
+- [ ] Unit tests cho `SettlementsService` — không có `.spec.ts`, coverage = 0%, test plan yêu cầu ≥ 80% (M1)
+  - `createSettlement` — happy path, event SETTLED/ARCHIVED → 400, fromId = toId → 400, unknown member → 404
+  - `confirmSettlement` — recipient ✓, organizer ✓, non-recipient → 403, already CONFIRMED → 400
+  - `deleteSettlement` — payer ✓, organizer ✓, recipient ✓ (sau fix F2), non-authorized → 403, CONFIRMED → 400
+- [ ] Integration tests cho Settlements endpoints dùng Supertest + Neon DB (M1)
+  - `POST` → 201 PENDING; `PATCH confirm` → 200 CONFIRMED, non-recipient → 403; `DELETE` → 204 PENDING, CONFIRMED → 400
+
 **Notifications module**
 
 - [x] `POST /events/:id/reminders` — send email reminder to a debtor (organizer only)
 - [x] Rate-limit check: reject if reminder sent in last 24h for this member
 - [x] Resend email service (reminder template + PDF download link)
+
+**Notifications module — QA fixes**
+
+- [ ] Fix reminder email: thêm số tiền đang nợ, link đến event cụ thể (`/events/:eventId`), và payment link MoMo/VNPay — spec §5.7 yêu cầu bốn nội dung bắt buộc; hiện tại email chỉ có tên event và link `/dashboard`. Cần truyền `eventId` và balance data vào `sendReminderEmail()` (F4)
+- [ ] Fix race condition ở rate limit: pattern read→check→write có TOCTOU window — hai request cùng lúc đều vượt qua check và gửi 2 email. Cần dùng conditional update kiểm tra `count` row affected = 1 (S1)
+- [ ] Fix reminder link trỏ về `/dashboard`: cần link trực tiếp đến `/events/:eventId` để người nhận không phải tự tìm event (S3)
+
+**Notifications module — unit & integration test gaps**
+
+- [ ] Unit tests cho `NotificationsService` — không có `.spec.ts`, coverage = 0%, test plan yêu cầu ≥ 80% (M1)
+  - happy path → `{ ok, sentTo, lastReminderAt }`; caller không phải organizer → 403; guest target → 400; trong cooldown → 400 với remaining hours
+- [ ] Integration test: `POST /events/:id/reminders` — organizer → 200, non-organizer → 403, cooldown → 400
 
 **Messages module**
 
