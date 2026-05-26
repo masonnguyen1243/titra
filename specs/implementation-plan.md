@@ -450,12 +450,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Admin module — QA fixes**
 
-- [ ] Fix `getStats`: thiếu breakdown active/archived cho `totalEvents` — spec §5.10 yêu cầu "total events (active / archived)" nhưng service chỉ trả một số tổng duy nhất. Cần thêm `activeEvents` và `archivedEvents` vào response (F1)
-- [ ] Fix `getEvents`: member count đếm cả PENDING member — query filter `removedAt: null` nhưng thiếu `status: MemberStatus.ACTIVE`, tương tự lỗi đã fix ở `EVENT_LIST_SELECT` (entry 71). Cần thêm `status: MemberStatus.ACTIVE` vào filter `_count.members` (F2)
-- [ ] Fix `totalVnd` Prisma Decimal: `vndResult._sum.amount` trả về `Decimal` object của Prisma, không phải JS `number`. `?? 0` không convert type — JSON serializer có thể trả chuỗi hoặc object thay vì integer. Cần wrap bằng `Number(vndResult._sum.amount ?? 0)` (F3)
-- [ ] Fix "Quản trị" nav link hiển thị cho mọi user: `apps/web/app/(app)/layout.tsx:13` render link `/admin` không điều kiện cho tất cả user đăng nhập — cần ẩn link này đối với non-admin (liên quan đến Phase 4 wiring nhưng là lỗi UI hiện tại) (S1)
-- [ ] Fix thiếu revoke refresh token khi deactivate user: khi admin deactivate một tài khoản, các `RefreshToken` row trong DB của user đó không bị xoá. `JwtAuthGuard` check `isActive` nên access token mới fail, nhưng refresh token row vẫn tồn tại đến hết TTL 7 ngày — nên chạy `prisma.refreshToken.deleteMany({ where: { userId } })` sau khi update `isActive: false` (S2)
-- [ ] Thêm rate limiting cho admin write operations: `PATCH /admin/users/:id` và `PATCH /admin/events/:id/archive` không có rate limit riêng — global 60 req/min cho phép mass deactivation qua script với JWT admin bị compromise. Cần thêm `@Throttle` chặt hơn trên các endpoint này (S3)
+- [x] Fix `getStats`: thiếu breakdown active/archived cho `totalEvents` — spec §5.10 yêu cầu "total events (active / archived)" nhưng service chỉ trả một số tổng duy nhất. Cần thêm `activeEvents` và `archivedEvents` vào response (F1)
+- [x] Fix `getEvents`: member count đếm cả PENDING member — query filter `removedAt: null` nhưng thiếu `status: MemberStatus.ACTIVE`, tương tự lỗi đã fix ở `EVENT_LIST_SELECT` (entry 71). Cần thêm `status: MemberStatus.ACTIVE` vào filter `_count.members` (F2)
+- [x] Fix `totalVnd` Prisma Decimal: `vndResult._sum.amount` trả về `Decimal` object của Prisma, không phải JS `number`. `?? 0` không convert type — JSON serializer có thể trả chuỗi hoặc object thay vì integer. Cần wrap bằng `Number(vndResult._sum.amount ?? 0)` (F3)
+- [x] Fix "Quản trị" nav link hiển thị cho mọi user: `apps/web/app/(app)/layout.tsx:13` render link `/admin` không điều kiện cho tất cả user đăng nhập — cần ẩn link này đối với non-admin (liên quan đến Phase 4 wiring nhưng là lỗi UI hiện tại) (S1)
+- [x] Fix thiếu revoke refresh token khi deactivate user: khi admin deactivate một tài khoản, các `RefreshToken` row trong DB của user đó không bị xoá. `JwtAuthGuard` check `isActive` nên access token mới fail, nhưng refresh token row vẫn tồn tại đến hết TTL 7 ngày — nên chạy `prisma.refreshToken.deleteMany({ where: { userId } })` sau khi update `isActive: false` (S2)
+- [x] Thêm rate limiting cho admin write operations: `PATCH /admin/users/:id` và `PATCH /admin/events/:id/archive` không có rate limit riêng — global 60 req/min cho phép mass deactivation qua script với JWT admin bị compromise. Cần thêm `@Throttle` chặt hơn trên các endpoint này (S3)
 
 **Admin module — unit & integration test gaps**
 

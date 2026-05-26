@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { EventStatus, UserRole } from '@prisma/client';
+import { EventStatus, MemberStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginateDto } from './dto/paginate.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
@@ -48,7 +48,7 @@ export class AdminService {
       throw new BadRequestException('Không thể thay đổi trạng thái tài khoản admin');
     }
 
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id: userId },
       data: { isActive: dto.isActive },
       select: {
@@ -60,6 +60,12 @@ export class AdminService {
         createdAt: true,
       },
     });
+
+    if (!dto.isActive) {
+      await this.prisma.refreshToken.deleteMany({ where: { userId } });
+    }
+
+    return updated;
   }
 
   async getEvents(dto: PaginateDto) {
@@ -79,7 +85,13 @@ export class AdminService {
           status: true,
           createdAt: true,
           organizer: { select: { id: true, name: true, email: true } },
-          _count: { select: { members: { where: { removedAt: null } } } },
+          _count: {
+            select: {
+              members: {
+                where: { status: MemberStatus.ACTIVE, removedAt: null },
+              },
+            },
+          },
         },
       }),
       this.prisma.event.count({ where: { deletedAt: null } }),
@@ -110,19 +122,28 @@ export class AdminService {
   }
 
   async getStats() {
-    const [totalUsers, totalEvents, vndResult] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.event.count({ where: { deletedAt: null } }),
-      this.prisma.expense.aggregate({
-        where: { deletedAt: null },
-        _sum: { amount: true },
-      }),
-    ]);
+    const [totalUsers, totalEvents, activeEvents, archivedEvents, vndResult] =
+      await Promise.all([
+        this.prisma.user.count(),
+        this.prisma.event.count({ where: { deletedAt: null } }),
+        this.prisma.event.count({
+          where: { deletedAt: null, status: EventStatus.ACTIVE },
+        }),
+        this.prisma.event.count({
+          where: { deletedAt: null, status: EventStatus.ARCHIVED },
+        }),
+        this.prisma.expense.aggregate({
+          where: { deletedAt: null },
+          _sum: { amount: true },
+        }),
+      ]);
 
     return {
       totalUsers,
       totalEvents,
-      totalVnd: vndResult._sum.amount ?? 0,
+      activeEvents,
+      archivedEvents,
+      totalVnd: Number(vndResult._sum.amount ?? 0),
     };
   }
 }

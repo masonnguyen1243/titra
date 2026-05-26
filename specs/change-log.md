@@ -1,5 +1,51 @@
 # Change Log — Titra
 
+## 2026-05-26 (122) — Admin module QA fix S3: rate limit admin write endpoints
+
+**Files changed:**
+- `apps/api/src/admin/admin.controller.ts`:
+  - Added `Throttle` import from `@nestjs/throttler`.
+  - Applied `@Throttle({ default: { ttl: 60_000, limit: 10 } })` to `PATCH /admin/users/:id` and `PATCH /admin/events/:id/archive`. Both endpoints now enforce 10 requests per minute per IP, overriding the global 60 req/min bucket. This prevents a compromised admin JWT from being scripted to mass-deactivate users or archive events before being detected and revoked.
+
+---
+
+## 2026-05-26 (121) — Admin module QA fix S2: revoke refresh tokens on user deactivation
+
+**Files changed:**
+- `apps/api/src/admin/admin.service.ts`: `updateUserStatus` — after the `user.update` call, when `dto.isActive` is `false`, runs `refreshToken.deleteMany({ where: { userId } })` to purge all refresh token rows for that user. The 15-minute access token will naturally expire and `JwtAuthGuard`'s `isActive` check will reject any new access token obtained before expiry; the refresh token purge closes the remaining 7-day window where the deactivated user could otherwise silently obtain a new access token pair. When re-activating (`isActive: true`), no token action is needed — the user must log in again to get fresh tokens.
+
+---
+
+## 2026-05-26 (120) — Admin module QA fix S1: hide "Quản trị" nav link for non-admin users
+
+**Files changed:**
+- `apps/web/app/(app)/layout.tsx`: converted to a server component that reads the `access_token` cookie from `next/headers` and base64-decodes the JWT payload to extract `role`. The "Quản trị" link to `/admin` is now only rendered when `role === 'ADMIN'`. Non-admin users no longer see the link in the header navigation. No extra dependencies added — `Buffer.from(..., 'base64url')` is available in the Node.js runtime. The decode is purely for UI gating; the API's `@Roles(UserRole.ADMIN)` guard enforces actual access control.
+
+---
+
+## 2026-05-26 (119) — Admin module QA fix F3: totalVnd converts Prisma Decimal to JS number
+
+**Files changed:**
+- `apps/api/src/admin/admin.service.ts`: `getStats` — wrapped `vndResult._sum.amount ?? 0` with `Number(...)`. Prisma's `aggregate._sum` returns a `Decimal` object (from the `decimal.js` library), not a plain JS number. Without the conversion, `JSON.stringify` serialises it as a string (e.g. `"500000"`) or an object, breaking any client that expects an integer. `Number()` coerces it to a native number before the response is serialised.
+
+---
+
+## 2026-05-26 (118) — Admin module QA fix F2: getEvents member count excludes PENDING members
+
+**Files changed:**
+- `apps/api/src/admin/admin.service.ts`:
+  - Added `MemberStatus` to the `@prisma/client` import.
+  - `getEvents`: updated `_count.members` filter from `{ removedAt: null }` to `{ status: MemberStatus.ACTIVE, removedAt: null }`. PENDING members (invited but not yet accepted) are no longer counted, matching the fix already applied to `EVENT_LIST_SELECT` in the events service (entry 71).
+
+---
+
+## 2026-05-26 (117) — Admin module QA fix F1: getStats adds activeEvents / archivedEvents breakdown
+
+**Files changed:**
+- `apps/api/src/admin/admin.service.ts`: `getStats` now runs two additional parallel Prisma `count` queries — one filtered to `status: EventStatus.ACTIVE` and one to `status: EventStatus.ARCHIVED` (both still exclude soft-deleted events via `deletedAt: null`). Response now includes `activeEvents` and `archivedEvents` fields alongside the existing `totalEvents`, satisfying spec §5.10 which requires "total events (active / archived)".
+
+---
+
 ## 2026-05-26 (116) — Admin module
 
 **Files added:**
