@@ -401,9 +401,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Notifications module — unit & integration test gaps**
 
-- [ ] Unit tests cho `NotificationsService` — không có `.spec.ts`, coverage = 0%, test plan yêu cầu ≥ 80% (M1)
+- [x] Unit tests cho `NotificationsService` — không có `.spec.ts`, coverage = 0%, test plan yêu cầu ≥ 80% (M1)
   - happy path → `{ ok, sentTo, lastReminderAt }`; caller không phải organizer → 403; guest target → 400; trong cooldown → 400 với remaining hours
-- [ ] Integration test: `POST /events/:id/reminders` — organizer → 200, non-organizer → 403, cooldown → 400
+- [x] Integration test: `POST /events/:id/reminders` — organizer → 200, non-organizer → 403, cooldown → 400
 
 **Messages module**
 

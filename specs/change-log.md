@@ -1,5 +1,54 @@
 # Change Log — Titra
 
+## 2026-05-26 (104) — Phase 3: Integration tests for Notifications endpoint (M1)
+
+**File added:**
+- `apps/api/test/notifications.e2e-spec.ts` (**new**): 10 integration tests (Supertest + Neon DB) covering `POST /events/:eventId/reminders`.
+
+**Isolation strategy:** per-run `RUN_ID = e2e-notif-${Date.now()}` prefix; stale rows cleaned in `beforeAll`, created rows deleted in `afterAll` (events before users to respect the `organizerId` FK). A `beforeEach` resets `lastReminderAt = null` on the debtor member so cooldown tests don't bleed across cases.
+
+**Member setup:** organizer creates the event (auto-added as ORGANIZER); the debtor is inserted directly via Prisma as an ACTIVE MEMBER, bypassing the invite flow.
+
+**Tests:**
+- `200` — organizer sends reminder → `{ ok: true, sentTo, lastReminderAt }`
+- `200` — `lastReminderAt` is a valid ISO timestamp
+- `403` — regular MEMBER cannot send reminder
+- `403` — user not in the event cannot send reminder
+- `400` — second reminder within 24 h is rejected (cooldown gate)
+- `400` — cooldown error message contains "giờ" (remaining hours)
+- `404` — event does not exist
+- `404` — member ID does not exist in the event
+- `401` — unauthenticated request
+- `400` — missing `memberId` in request body (DTO validation)
+
+**All 10 tests pass.**
+
+---
+
+## 2026-05-26 (103) — Phase 3: Unit tests for NotificationsService (M1)
+
+**File added:**
+- `apps/api/src/notifications/notifications.service.spec.ts` (**new**): 13 unit tests covering all code paths of `sendReminder`.
+
+**Tests by scenario:**
+- `happy path — returns ok, sentTo and lastReminderAt` — verifies response shape
+- `happy path — calls updateMany to atomically claim rate-limit slot` — confirms the conditional update is called with the correct args
+- `throws 404 when event does not exist`
+- `throws 403 when caller is not a member of the event` (empty members array)
+- `throws 403 when caller is MEMBER, not ORGANIZER`
+- `throws 404 when target member does not exist in the event`
+- `throws 400 when target member is a guest (no user account)`
+- `throws 400 with remaining hours when in cooldown window` (updateMany returns count=0)
+- `error message includes remaining hours when in cooldown` — regex match for "23 giờ"
+- `does not call updateMany when target member is not found` — guard fires before rate-limit
+- `does not call updateMany when caller is not organizer` — guard fires before rate-limit
+- `computes amountOwed = 0 when member is a creditor (net > 0)` — net positive → amountOwed=0, send still succeeds
+- `computes correct amountOwed for a debtor` — net negative → amountOwed=abs(net), send succeeds
+
+**All 13 tests pass.**
+
+---
+
 ## 2026-05-26 (102) — Phase 3: Fix rate-limit TOCTOU race condition in sendReminder (S1) + mark S3 done
 
 **File changed:**
