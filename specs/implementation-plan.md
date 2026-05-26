@@ -371,7 +371,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 **Settlements module — QA fixes**
 
 - [x] Fix balance calculation: `GET /events/:id/balances` không đưa confirmed settlements vào tính toán — sau khi confirm settlement, balance page vẫn hiển thị số dư cũ vì `balances.controller.ts` chỉ load `paidExpenses` và `expenseSplits`. Vi phạm spec §5.4 và §5.5. Cần load CONFIRMED settlements per member và trừ amount vào net (F1)
-- [ ] Fix `deleteSettlement`: người nhận tiền (recipient) không thể reject — hiện tại chỉ payer hoặc organizer mới được xoá, trong khi spec §5.5 nói "organizer or recipient can reject". Cần thêm check `settlement.toMember.userId === callerId` (F2)
+- [x] Fix `deleteSettlement`: người nhận tiền (recipient) không thể reject — hiện tại chỉ payer hoặc organizer mới được xoá, trong khi spec §5.5 nói "organizer or recipient can reject". Cần thêm check `settlement.toMember.userId === callerId` (F2)
 - [ ] Fix `confirmSettlement`: gửi email thông báo cho organizer khi settlement được confirm — spec §5.5 yêu cầu "On confirmation, the organizer receives an email notification"; hiện tại service không lookup organizer và không gửi email (F3)
 - [ ] Fix `confirmSettlement`: thêm guard chặn SETTLED/ARCHIVED event — `createSettlement` có guard này nhưng `confirmSettlement` thì không (M4)
 - [ ] Fix `createSettlement`: kiểm tra `status: MemberStatus.ACTIVE` cho `fromMemberId` và `toMemberId` — hiện chỉ lọc `removedAt: null`, cho phép PENDING member là bên trong settlement (M2)

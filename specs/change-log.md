@@ -1,5 +1,14 @@
 # Change Log — Titra
 
+## 2026-05-26 (93) — Phase 3: Fix deleteSettlement — allow recipient to reject (F2)
+
+**Problem:** spec §5.5 states "organizer or recipient can reject" a settlement, but `deleteSettlement` only allowed the payer or organizer. The recipient had no way to reject a payment they didn't receive.
+
+**Files changed:**
+- `apps/api/src/settlements/settlements.service.ts`: added `toMember: { select: { userId: true } }` to the settlement include; added `isRecipient` check (`settlement.toMember.userId === callerId`); updated the authorization guard to `!isPayer && !isRecipient && !isOrganizer`; updated the error message to mention recipient.
+
+---
+
 ## 2026-05-26 (92) — Phase 3: Fix balance calculation to include confirmed settlements (F1)
 
 **Problem:** `GET /events/:id/balances` ignored confirmed settlements, so balances remained unchanged after a settlement was confirmed. Violated spec §5.4 and §5.5.

@@ -172,6 +172,7 @@ export class SettlementsService {
       where: { id: settlementId, eventId },
       include: {
         fromMember: { select: { userId: true } },
+        toMember: { select: { userId: true } },
       },
     });
 
@@ -183,11 +184,12 @@ export class SettlementsService {
       throw new BadRequestException('Không thể xoá thanh toán đã được xác nhận');
     }
 
-    // Only the payer or an organizer can delete a PENDING settlement
+    // Payer, recipient, or organizer can delete a PENDING settlement
     const isPayer = settlement.fromMember.userId === callerId;
+    const isRecipient = settlement.toMember.userId === callerId;
     const isOrganizer = callerMember.role === MemberRole.ORGANIZER;
-    if (!isPayer && !isOrganizer) {
-      throw new ForbiddenException('Chỉ người trả tiền hoặc ban tổ chức mới có thể xoá thanh toán');
+    if (!isPayer && !isRecipient && !isOrganizer) {
+      throw new ForbiddenException('Chỉ người trả tiền, người nhận hoặc ban tổ chức mới có thể xoá thanh toán');
     }
 
     await this.prisma.settlement.delete({ where: { id: settlementId } });
