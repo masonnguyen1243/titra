@@ -442,11 +442,11 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Admin module**
 
-- [ ] `GET /admin/users` — paginated user list
-- [ ] `PATCH /admin/users/:id` — activate / deactivate user
-- [ ] `GET /admin/events` — paginated event list
-- [ ] `PATCH /admin/events/:id/archive` — force archive event
-- [ ] `GET /admin/stats` — total users, events, VND tracked
+- [x] `GET /admin/users` — paginated user list
+- [x] `PATCH /admin/users/:id` — activate / deactivate user
+- [x] `GET /admin/events` — paginated event list
+- [x] `PATCH /admin/events/:id/archive` — force archive event
+- [x] `GET /admin/stats` — total users, events, VND tracked
 
 ---
 

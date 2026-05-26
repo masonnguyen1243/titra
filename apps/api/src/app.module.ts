@@ -12,6 +12,7 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { MessagesModule } from './messages/messages.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SettlementsModule } from './settlements/settlements.module';
+import { AdminModule } from './admin/admin.module';
 import { ExportModule } from './export/export.module';
 import { UploadModule } from './upload/upload.module';
 import { UsersModule } from './users/users.module';
@@ -34,6 +35,7 @@ import { UsersModule } from './users/users.module';
     MessagesModule,
     UploadModule,
     ExportModule,
+    AdminModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

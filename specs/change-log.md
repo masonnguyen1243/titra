@@ -1,5 +1,31 @@
 # Change Log — Titra
 
+## 2026-05-26 (116) — Admin module
+
+**Files added:**
+- `apps/api/src/admin/admin.module.ts`
+- `apps/api/src/admin/admin.controller.ts` — all 5 endpoints, `@Roles(ADMIN)` on the controller class
+- `apps/api/src/admin/admin.service.ts` — business logic + Prisma queries
+- `apps/api/src/admin/dto/paginate.dto.ts` — `page` / `limit` query params with validation
+- `apps/api/src/admin/dto/update-user-status.dto.ts` — `{ isActive: boolean }`
+
+**Files modified:**
+- `apps/api/src/app.module.ts` — registered `AdminModule`
+
+**Endpoints:**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/admin/stats` | Total users, events, VND tracked |
+| `GET` | `/api/v1/admin/users?page=1&limit=20` | Paginated user list |
+| `PATCH` | `/api/v1/admin/users/:id` | Activate / deactivate (guards against changing other admins) |
+| `GET` | `/api/v1/admin/events?page=1&limit=20` | Paginated event list (excludes soft-deleted) |
+| `PATCH` | `/api/v1/admin/events/:id/archive` | Force-archive any event |
+
+**Guards:** All endpoints require `UserRole.ADMIN` via `@Roles` + the global `RolesGuard`. Non-admins get 403.
+
+---
+
 ## 2026-05-26 (115) — Export module: PDF generation
 
 **Files added:**
