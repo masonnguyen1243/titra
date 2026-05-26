@@ -1,5 +1,19 @@
 # Change Log — Titra
 
+## 2026-05-26 (94) — Phase 3: Fix confirmSettlement — email organizer on confirmation (F3)
+
+**Problem:** spec §5.5 requires the organizer to receive an email notification when a settlement is confirmed. The service had no email logic and did not even look up the organizer.
+
+**Files changed:**
+- `apps/api/src/settlements/settlements.service.ts`:
+  - Added `Logger` and `escapeHtml` helper (same pattern as `NotificationsService`).
+  - Expanded event query in `confirmSettlement` to fetch the active organizer's `user.email` and `user.name`.
+  - Captured the `settlement.update` result as `updated` instead of returning it directly.
+  - Fire-and-forget call to new private `sendSettlementConfirmedEmail(email, organizerName, eventName, payerNickname, recipientNickname, amount, eventId)` after the DB update.
+  - `sendSettlementConfirmedEmail`: logs to console in dev (no `RESEND_API_KEY`); sends a Vietnamese-language HTML email via Resend in production with payer, recipient, amount, and a direct link to `/events/:id/settlements`; errors are caught and logged, not thrown.
+
+---
+
 ## 2026-05-26 (93) — Phase 3: Fix deleteSettlement — allow recipient to reject (F2)
 
 **Problem:** spec §5.5 states "organizer or recipient can reject" a settlement, but `deleteSettlement` only allowed the payer or organizer. The recipient had no way to reject a payment they didn't receive.
