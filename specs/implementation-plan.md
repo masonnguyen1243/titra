@@ -407,9 +407,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Messages module**
 
-- [ ] `GET /events/:id/messages` — fetch message history (paginated)
-- [ ] `POST /events/:id/messages` — post a message (REST fallback)
-- [ ] Socket.io gateway: `joinRoom`, `leaveRoom`, `sendMessage`, `newMessage` events
+- [x] `GET /events/:id/messages` — fetch message history (paginated)
+- [x] `POST /events/:id/messages` — post a message (REST fallback)
+- [x] Socket.io gateway: `joinRoom`, `leaveRoom`, `sendMessage`, `newMessage` events
 
 **Export module**
 

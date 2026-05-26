@@ -1,5 +1,34 @@
 # Change Log — Titra
 
+## 2026-05-26 (105) — Phase 3: Messages module (REST + Socket.io gateway)
+
+**Files added:**
+- `apps/api/src/messages/dto/send-message.dto.ts` — DTO with `content` (non-empty string, max 2000 chars)
+- `apps/api/src/messages/dto/get-messages.dto.ts` — DTO with optional `cursor` (UUID) and `limit` (1–100, default 50) for cursor-based pagination
+- `apps/api/src/messages/messages.service.ts` — `getMessages`, `createMessage`, `isActiveMember`; verifies event exists + caller is ACTIVE member before every operation
+- `apps/api/src/messages/messages.gateway.ts` — Socket.io WebSocket gateway; authenticates via `access_token` cookie or `auth.token` handshake field; implements `joinRoom`, `leaveRoom`, `sendMessage` events and emits `newMessage` to the event room; exposes `broadcastMessage` for the REST controller
+- `apps/api/src/messages/messages.controller.ts` — `GET /events/:eventId/messages` (cursor-paginated) and `POST /events/:eventId/messages` (REST fallback that also broadcasts via gateway)
+- `apps/api/src/messages/messages.module.ts` — imports `JwtModule` for gateway token verification
+
+**Files modified:**
+- `apps/api/src/app.module.ts` — registered `MessagesModule`
+- `apps/api/src/main.ts` — added `app.useWebSocketAdapter(new IoAdapter(app))` so Socket.io is backed by the correct adapter
+- `apps/api/package.json` — added `@nestjs/websockets`, `@nestjs/platform-socket.io`, `socket.io` dependencies
+
+**Pagination design:**
+- `GET /events/:id/messages?limit=50&cursor=<msgId>` returns up to `limit` messages in chronological order
+- Messages are fetched `DESC` (newest first) then reversed for display
+- `nextCursor` is the ID of the oldest message in the page — the client passes it to load an earlier batch ("load more" scrolling up)
+- No cursor → latest messages (initial load)
+
+**Auth for WebSocket:**
+- Connection handler extracts JWT from `access_token` cookie or `socket.handshake.auth.token`
+- Invalid or missing token → socket disconnects immediately
+
+**All 129 existing unit tests pass.**
+
+---
+
 ## 2026-05-26 (104) — Phase 3: Integration tests for Notifications endpoint (M1)
 
 **File added:**
