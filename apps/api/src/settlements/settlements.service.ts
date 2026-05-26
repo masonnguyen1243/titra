@@ -57,20 +57,20 @@ export class SettlementsService {
 
     const [fromMember, toMember] = await Promise.all([
       this.prisma.eventMember.findFirst({
-        where: { id: dto.fromMemberId, eventId, removedAt: null },
+        where: { id: dto.fromMemberId, eventId, removedAt: null, status: MemberStatus.ACTIVE },
         select: { id: true },
       }),
       this.prisma.eventMember.findFirst({
-        where: { id: dto.toMemberId, eventId, removedAt: null },
+        where: { id: dto.toMemberId, eventId, removedAt: null, status: MemberStatus.ACTIVE },
         select: { id: true },
       }),
     ]);
 
     if (!fromMember) {
-      throw new NotFoundException('Người trả không tồn tại trong sự kiện này');
+      throw new NotFoundException('Người trả không tồn tại hoặc chưa là thành viên chính thức của sự kiện');
     }
     if (!toMember) {
-      throw new NotFoundException('Người nhận không tồn tại trong sự kiện này');
+      throw new NotFoundException('Người nhận không tồn tại hoặc chưa là thành viên chính thức của sự kiện');
     }
 
     return this.prisma.settlement.create({

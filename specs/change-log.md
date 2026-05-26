@@ -1,5 +1,14 @@
 # Change Log — Titra
 
+## 2026-05-26 (96) — Phase 3: Fix createSettlement — require ACTIVE status for both members (M2)
+
+**Problem:** `createSettlement` only filtered `removedAt: null` when looking up `fromMemberId` and `toMemberId`. A member with `status: PENDING` (invited but not yet accepted) could be a party in a settlement, which is logically invalid.
+
+**Files changed:**
+- `apps/api/src/settlements/settlements.service.ts`: added `status: MemberStatus.ACTIVE` to both `eventMember.findFirst` queries for `fromMemberId` and `toMemberId`; updated error messages to mention "chưa là thành viên chính thức" so it's clear the member exists but is not ACTIVE.
+
+---
+
 ## 2026-05-26 (95) — Phase 3: Fix confirmSettlement — guard SETTLED/ARCHIVED event (M4)
 
 **Problem:** `createSettlement` already blocked SETTLED/ARCHIVED events, but `confirmSettlement` had no such guard. A settlement created before the event was closed could still be confirmed after the fact, corrupting historical balances.
