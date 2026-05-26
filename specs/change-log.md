@@ -1,5 +1,15 @@
 # Change Log — Titra
 
+## 2026-05-26 (97) — Phase 3: Audit Settlement.method default (M3 — no change needed)
+
+**Audit result:** `Settlement.method` is safe as-is. Verified:
+- Prisma schema: `method SettlementMethod @default(CASH)` ✅
+- Migration SQL: `"method" "SettlementMethod" NOT NULL DEFAULT 'CASH'` ✅
+
+The column is `NOT NULL` with a DB-level default, so `null` is structurally impossible. When `dto.method` is omitted (`undefined`), Prisma omits the field from the `INSERT` and the DB applies `CASH`. No code change was required.
+
+---
+
 ## 2026-05-26 (96) — Phase 3: Fix createSettlement — require ACTIVE status for both members (M2)
 
 **Problem:** `createSettlement` only filtered `removedAt: null` when looking up `fromMemberId` and `toMemberId`. A member with `status: PENDING` (invited but not yet accepted) could be a party in a settlement, which is logically invalid.
