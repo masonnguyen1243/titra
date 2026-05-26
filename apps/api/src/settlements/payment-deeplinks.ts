@@ -11,10 +11,11 @@ export function generateMomoDeepLink(params: {
   note?: string;
 }): { deepLink: string; webUrl: string } {
   const { phone, amount, note = '' } = params;
+  const encodedPhone = encodeURIComponent(phone);
   const encodedNote = encodeURIComponent(note);
 
-  const deepLink = `momo://transfer?phone=${phone}&amount=${amount}&note=${encodedNote}`;
-  const webUrl = `https://nhantien.momo.vn/${phone}?amount=${amount}&note=${encodedNote}`;
+  const deepLink = `momo://transfer?phone=${encodedPhone}&amount=${amount}&note=${encodedNote}`;
+  const webUrl = `https://nhantien.momo.vn/${encodedPhone}?amount=${amount}&note=${encodedNote}`;
 
   return { deepLink, webUrl };
 }
@@ -33,10 +34,11 @@ export function generateVNPayDeepLink(params: {
   description?: string;
 }): { deepLink: string; webUrl: string } {
   const { bankAccount, amount, description = '' } = params;
+  const encodedAccount = encodeURIComponent(bankAccount);
   const encodedDesc = encodeURIComponent(description);
 
-  const deepLink = `vnpay://transfer?account=${bankAccount}&amount=${amount}&desc=${encodedDesc}`;
-  const webUrl = `https://vnpay.vn/transfer?account=${bankAccount}&amount=${amount}&desc=${encodedDesc}`;
+  const deepLink = `vnpay://transfer?account=${encodedAccount}&amount=${amount}&desc=${encodedDesc}`;
+  const webUrl = `https://vnpay.vn/transfer?account=${encodedAccount}&amount=${amount}&desc=${encodedDesc}`;
 
   return { deepLink, webUrl };
 }

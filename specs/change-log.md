@@ -1,5 +1,17 @@
 # Change Log — Titra
 
+## 2026-05-26 (98) — Phase 3: Fix deep-link generator — encode phone and bankAccount (S2)
+
+**Problem:** `phone` and `bankAccount` were interpolated raw into URLs. A value like `+84912345678` encodes `+` as a space in query strings; values with spaces or special chars break the URL entirely, causing MoMo/VNPay to fail parsing.
+
+**Files changed:**
+- `apps/api/src/settlements/payment-deeplinks.ts`:
+  - `generateMomoDeepLink`: added `encodedPhone = encodeURIComponent(phone)`; used in both `deepLink` and `webUrl`.
+  - `generateVNPayDeepLink`: added `encodedAccount = encodeURIComponent(bankAccount)`; used in both `deepLink` and `webUrl`.
+  - `note` and `description` were already encoded — unchanged.
+
+---
+
 ## 2026-05-26 (97) — Phase 3: Audit Settlement.method default (M3 — no change needed)
 
 **Audit result:** `Settlement.method` is safe as-is. Verified:

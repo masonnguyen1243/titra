@@ -376,7 +376,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Fix `confirmSettlement`: thêm guard chặn SETTLED/ARCHIVED event — `createSettlement` có guard này nhưng `confirmSettlement` thì không (M4)
 - [x] Fix `createSettlement`: kiểm tra `status: MemberStatus.ACTIVE` cho `fromMemberId` và `toMemberId` — hiện chỉ lọc `removedAt: null`, cho phép PENDING member là bên trong settlement (M2)
 - [x] Xác nhận `Settlement.method` có DB-level default CASH trong Prisma schema — DTO đánh dấu `@IsOptional()` nhưng Prisma create không set default tường minh; nếu schema thiếu default thì method sẽ là null (M3)
-- [ ] Fix deep-link generator: encode `phone` và `bankAccount` qua `encodeURIComponent` — số điện thoại dạng `+84912...` làm URL không hợp lệ, app MoMo/VNPay không parse được (S2)
+- [x] Fix deep-link generator: encode `phone` và `bankAccount` qua `encodeURIComponent` — số điện thoại dạng `+84912...` làm URL không hợp lệ, app MoMo/VNPay không parse được (S2)
 
 **Settlements module — unit & integration test gaps**
 
