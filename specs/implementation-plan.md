@@ -484,6 +484,20 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Configure TanStack Query provider in the app root
 - [x] Define typed query/mutation hooks per domain in `apps/web/lib/hooks/`
 
+**API client setup — QA fixes**
+
+- [x] Fix concurrent 401 race condition in `api.ts`: hai request cùng nhận 401 sẽ gọi `callRefresh()` song song — refresh token rotation khiến call thứ hai fail → logout nhầm. Cần dùng module-level `refreshPromise` singleton để dedup (F1, S3)
+- [x] Fix `api.ts`: bỏ `Content-Type: application/json` khi không có body (GET, DELETE) — một số proxy reject GET request có Content-Type header (S1)
+- [x] Fix `api.ts`: sau `window.location.href = '/login'` nên `return` ngay thay vì `throw` — tránh TanStack Query bắt lỗi và hiện error state trước khi navigation hoàn tất (F2)
+- [x] Fix `api.ts`: thêm request timeout bằng `AbortController` (đề xuất 30s) — spec §5.9 yêu cầu PDF export hoàn thành trong 30s; hiện tại fetch có thể treo vô thời hạn (M5)
+- [x] Fix `use-events.ts`: xác minh và đồng bộ `EventType` enum — code dùng `'DINING'` nhưng product spec §5.2 nói `'MEAL'`; cần kiểm tra Prisma schema và sửa type nếu sai (F3)
+- [x] Fix `use-events.ts`: đổi `AddMemberPayload` thành discriminated union `{ email: string } | { nickname: string }` — hiện tại cả hai field đều optional, cho phép gọi với object rỗng gây 400 khó debug (M6)
+- [x] Thêm `useVerifyEmail`, `useResetPassword`, `useResendVerification` vào `use-auth.ts` — ba hook này cần thiết để wire các trang verify email, reset password, và nút "Gửi lại email" (M2)
+- [x] Thêm `useAcceptInvitation` hook — backend `POST /events/:id/invitations/:token/accept` đã có, page `invitations/[token]/accept/page.tsx` đã có, nhưng chưa có hook tương ứng (M1)
+- [x] Fix `use-auth.ts` `useLogout`: thêm `onSuccess: () => qc.clear()` để xoá toàn bộ query cache sau khi logout — tránh data của user cũ hiển thị nếu user khác đăng nhập trên cùng tab (M3)
+- [x] Fix `use-messages.ts`: đổi `useMessages` sang `useInfiniteQuery` để hỗ trợ "load older messages" — `useQuery` với cursor hiện tại thay thế data mỗi lần cursor thay đổi, làm mất tin nhắn đang hiển thị (M4)
+- [x] Fix `api.ts`: thêm cảnh báo build-time hoặc runtime khi `NEXT_PUBLIC_API_URL` không được set — hiện tại fallback về `http://localhost:4000` âm thầm trong production (S2)
+
 **Auth**
 
 - [ ] Wire login form → `POST /auth/login` → redirect to dashboard on success

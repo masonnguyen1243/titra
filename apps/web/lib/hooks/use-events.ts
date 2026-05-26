@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 
 export type EventStatus = 'ACTIVE' | 'SETTLED' | 'ARCHIVED';
-export type EventType = 'TRIP' | 'DINING' | 'OTHER';
+export type EventType = 'TRIP' | 'MEAL' | 'OTHER';
 export type MemberRole = 'ORGANIZER' | 'MEMBER';
 
 export interface EventListItem {
@@ -45,10 +45,7 @@ interface UpdateEventPayload {
   coverImageUrl?: string;
 }
 
-interface AddMemberPayload {
-  email?: string;
-  nickname?: string;
-}
+type AddMemberPayload = { email: string } | { nickname: string };
 
 export const eventKeys = {
   all: () => ['events'] as const,
@@ -154,6 +151,18 @@ export function useRemoveMember(eventId: string) {
       api.delete<void>(`/events/${eventId}/members/${memberId}`),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: eventKeys.detail(eventId) });
+    },
+  });
+}
+
+export function useAcceptInvitation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ eventId, token }: { eventId: string; token: string }) =>
+      api.post<EventMember>(`/events/${eventId}/invitations/${token}/accept`),
+    onSuccess: (_data, { eventId }) => {
+      void qc.invalidateQueries({ queryKey: eventKeys.detail(eventId) });
+      void qc.invalidateQueries({ queryKey: eventKeys.all() });
     },
   });
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 
 interface LoginPayload {
@@ -33,7 +33,28 @@ export function useForgotPassword() {
 }
 
 export function useLogout() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.post<void>('/auth/logout'),
+    onSuccess: () => qc.clear(),
+  });
+}
+
+export function useVerifyEmail() {
+  return useMutation({
+    mutationFn: (token: string) => api.post<void>('/auth/verify-email', { token }),
+  });
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: ({ token, password }: { token: string; password: string }) =>
+      api.post<void>('/auth/reset-password', { token, password }),
+  });
+}
+
+export function useResendVerification() {
+  return useMutation({
+    mutationFn: (email: string) => api.post<void>('/auth/resend-verification', { email }),
   });
 }

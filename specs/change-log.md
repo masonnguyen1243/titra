@@ -1,5 +1,87 @@
 # Change Log — Titra
 
+## 2026-05-26 (138) — Phase 4: Warn when NEXT_PUBLIC_API_URL is unset in production
+
+**Files changed:**
+- `apps/web/lib/api.ts`: Added a module-level `console.warn` that fires when `NEXT_PUBLIC_API_URL` is not set and `NODE_ENV === 'production'`. Silent in local dev (where the localhost fallback is intentional). Surfaces immediately in production logs so misconfigured deployments are caught before any API call is made.
+
+---
+
+## 2026-05-26 (137) — Phase 4: Switch useMessages to useInfiniteQuery
+
+**Files changed:**
+- `apps/web/lib/hooks/use-messages.ts`: Replaced `useQuery` with `useInfiniteQuery`. The cursor is now managed internally via `initialPageParam: undefined` and `getNextPageParam: (page) => page.nextCursor ?? undefined`. The external `cursor` parameter was removed — callers call `fetchNextPage()` to load older messages. `data.pages` accumulates all fetched pages so existing messages are never discarded when paginating.
+
+  **Consumer change required:** chat pages must flatten messages with `data.pages.flatMap(p => p.messages)` instead of reading `data.messages` directly.
+
+---
+
+## 2026-05-26 (136) — Phase 4: Clear query cache on logout
+
+**Files changed:**
+- `apps/web/lib/hooks/use-auth.ts`: `useLogout` now imports `useQueryClient` and calls `qc.clear()` in `onSuccess`. This wipes all cached query data so a second user logging in on the same tab never sees the previous user's events, balances, or profile.
+
+---
+
+## 2026-05-26 (135) — Phase 4: Add useAcceptInvitation hook
+
+**Files changed:**
+- `apps/web/lib/hooks/use-events.ts`: Added `useAcceptInvitation()` — a `useMutation` that calls `POST /events/:eventId/invitations/:token/accept` and invalidates both `eventKeys.detail(eventId)` and `eventKeys.all()` on success so the dashboard and event detail pages reflect the new membership immediately.
+
+---
+
+## 2026-05-26 (134) — Phase 4: Add useVerifyEmail, useResetPassword, useResendVerification hooks
+
+**Files changed:**
+- `apps/web/lib/hooks/use-auth.ts`: Added three `useMutation` hooks that were missing but needed by existing frontend pages:
+  - `useVerifyEmail(token)` → `POST /auth/verify-email`
+  - `useResetPassword({ token, password })` → `POST /auth/reset-password`
+  - `useResendVerification(email)` → `POST /auth/resend-verification`
+
+---
+
+## 2026-05-26 (133) — Phase 4: Tighten AddMemberPayload to discriminated union
+
+**Files changed:**
+- `apps/web/lib/hooks/use-events.ts`: Replaced the loose `{ email?: string; nickname?: string }` interface with `{ email: string } | { nickname: string }`. TypeScript now rejects empty-object calls and calls that supply both fields, catching the mistake at compile time instead of getting a cryptic 400 at runtime.
+
+---
+
+## 2026-05-26 (132) — Phase 4: Correct EventType enum in use-events.ts
+
+**Files changed:**
+- `apps/web/lib/hooks/use-events.ts`: Changed `'DINING'` → `'MEAL'` in the `EventType` union type to match the Prisma schema (`enum EventType { TRIP MEAL OTHER }`). The mismatch would have caused TypeScript to accept `'DINING'` payloads that the backend rejects with 400.
+
+---
+
+## 2026-05-26 (131) — Phase 4: Add 30-second request timeout to api.ts
+
+**Files changed:**
+- `apps/web/lib/api.ts`: Each `request()` call now creates an `AbortController` with a 30-second timeout (`setTimeout → controller.abort()`). The `signal` is passed to `fetch`, and the timer is cleared in `finally` to prevent leaks. An `AbortError` (triggered by the timeout) is caught and rethrown as `ApiError(0, 'Yêu cầu quá thời gian chờ (30s)')`.
+
+---
+
+## 2026-05-26 (130) — Phase 4: Suppress error state on session-expired redirect
+
+**Files changed:**
+- `apps/web/lib/api.ts`: After `window.location.href = '/login'`, now returns `new Promise<T>(() => {})` (a promise that never settles) instead of throwing. This prevents TanStack Query from catching an `ApiError` and briefly flashing an error state while the browser navigates away. The `throw` path is kept for SSR where there is no `window`.
+
+---
+
+## 2026-05-26 (129) — Phase 4: Drop Content-Type header on bodyless requests
+
+**Files changed:**
+- `apps/web/lib/api.ts`: `Content-Type: application/json` is now only added when `body !== undefined`. GET and DELETE requests no longer carry the header, preventing proxy rejections on strict intermediaries.
+
+---
+
+## 2026-05-26 (128) — Phase 4: Fix concurrent 401 race condition in api.ts
+
+**Files changed:**
+- `apps/web/lib/api.ts`: Added module-level `refreshPromise: Promise<boolean> | null` singleton. `callRefresh()` now returns the in-flight promise when one already exists, so concurrent 401 responses all await the same refresh call. The singleton is cleared in `.finally()` so subsequent expirations trigger a fresh refresh.
+
+---
+
 ## 2026-05-26 (127) — Phase 4: Typed domain hooks
 
 **Files changed:**

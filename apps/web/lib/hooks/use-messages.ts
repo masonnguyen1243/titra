@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 
 export interface MessageSender {
@@ -26,13 +26,15 @@ export const messageKeys = {
   list: (eventId: string) => ['events', eventId, 'messages'] as const,
 };
 
-export function useMessages(eventId: string, cursor?: string) {
-  return useQuery({
-    queryKey: [...messageKeys.list(eventId), { cursor }],
-    queryFn: () => {
-      const params = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+export function useMessages(eventId: string) {
+  return useInfiniteQuery({
+    queryKey: messageKeys.list(eventId),
+    queryFn: ({ pageParam }) => {
+      const params = pageParam ? `?cursor=${encodeURIComponent(pageParam)}` : '';
       return api.get<MessagesPage>(`/events/${eventId}/messages${params}`);
     },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: !!eventId,
   });
 }
