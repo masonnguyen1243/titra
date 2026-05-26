@@ -5,6 +5,9 @@
   "transform": {
     "^.+\\.(t|j)s$": ["ts-jest", { "tsconfig": "tsconfig.e2e.json" }]
   },
+  "moduleNameMapper": {
+    "^@react-pdf/renderer$": "<rootDir>/test/__mocks__/@react-pdf/renderer.js"
+  },
   "testEnvironment": "node",
   "testTimeout": 120000
 }

@@ -1,5 +1,31 @@
 # Change Log — Titra
 
+## 2026-05-26 (124) — Admin module integration tests + e2e ESM fix
+
+**Files changed:**
+- `apps/api/test/admin.e2e-spec.ts` *(new)*: 25 integration tests covering all five admin endpoints against the real Neon DB. Isolation via per-run `RUN_ID` prefix on emails and event names; cleanup in `afterAll`. Users and events created via the API; admin role promoted via Prisma directly to avoid bootstrapping a separate admin registration flow. Test coverage:
+  - `GET /admin/stats` — 200 with correct field shape; `totalVnd` is a JS `number`; 403 non-admin; 401 unauthenticated.
+  - `GET /admin/users` — 200 with paginated shape; `passwordHash` absent; `?page=1&limit=1` respected; 403; 401.
+  - `PATCH /admin/users/:id` — 200 deactivate; 200 reactivate; 400 when target is ADMIN; 404; 403; 401.
+  - `GET /admin/events` — 200 with paginated shape including `organizer` and `_count.members`; pagination respected; 403; 401.
+  - `PATCH /admin/events/:id/archive` — 200 ACTIVE→ARCHIVED; 400 already ARCHIVED; 404; 403; 401.
+- `apps/api/test/jest-e2e.json`: added `moduleNameMapper` entry to route `@react-pdf/renderer` to a CJS stub, fixing the ESM parse error that caused **all** e2e test suites to fail since the Export module was added.
+- `apps/api/test/__mocks__/@react-pdf/renderer.js` *(new)*: CJS stub returning no-op React components and a `renderToBuffer` mock that resolves to `Buffer.from('mock-pdf')`. The admin and other e2e suites do not exercise the PDF export endpoint, so a stub is safe; the stub prevents the ESM import from crashing the Jest runtime.
+
+---
+
+## 2026-05-26 (123) — Admin module unit tests for AdminService
+
+**Files changed:**
+- `apps/api/src/admin/admin.service.spec.ts` *(new)*: 18 unit tests covering all five methods in `AdminService`:
+  - `getStats` — returns correct fields including `activeEvents` / `archivedEvents` breakdown; handles `null` aggregate sum (0 expenses → `totalVnd: 0`); confirms `totalVnd` is a plain JS `number` (guards against Prisma `Decimal` serialisation regression).
+  - `getUsers` — pagination `skip`/`take` logic; `totalPages` ceiling calculation; verifies `passwordHash` is absent from both the `select` argument and the returned items.
+  - `updateUserStatus` — 404 when user not found; 400 when target is ADMIN; deactivate path calls `refreshToken.deleteMany`; activate path skips token deletion.
+  - `getEvents` — `deletedAt: null` filter passed to `findMany`; correct `skip` for page 3; `_count.members` where clause includes `status: ACTIVE, removedAt: null`.
+  - `archiveEvent` — 404 when event not found / soft-deleted; 400 when already ARCHIVED; happy path for ACTIVE and SETTLED events.
+
+---
+
 ## 2026-05-26 (122) — Admin module QA fix S3: rate limit admin write endpoints
 
 **Files changed:**

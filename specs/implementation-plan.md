@@ -459,13 +459,13 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Admin module — unit & integration test gaps**
 
-- [ ] Unit tests cho `AdminService` — không có file `admin.service.spec.ts` nào, coverage = 0%; test plan yêu cầu ≥ 80% cho mọi API service (M1)
+- [x] Unit tests cho `AdminService` — không có file `admin.service.spec.ts` nào, coverage = 0%; test plan yêu cầu ≥ 80% cho mọi API service (M1)
   - `getStats` — trả đúng `totalUsers`, `totalEvents`, `totalVnd` (kể cả khi 0 expense)
   - `getUsers` — pagination hoạt động đúng (skip/take), không lộ `passwordHash`
   - `updateUserStatus` — 404 khi không tìm thấy user, 400 khi target là ADMIN, happy path activate/deactivate
   - `getEvents` — excludes soft-deleted, member count chỉ đếm ACTIVE member
   - `archiveEvent` — 404 khi không tìm thấy, 400 khi đã ARCHIVED, happy path
-- [ ] Integration tests cho Admin endpoints dùng Supertest + Neon DB — không có file `admin.e2e-spec.ts` trong khi tất cả các module khác đều có (M2)
+- [x] Integration tests cho Admin endpoints dùng Supertest + Neon DB — không có file `admin.e2e-spec.ts` trong khi tất cả các module khác đều có (M2)
   - `GET /admin/stats` → 200 admin, 403 non-admin, 401 unauthenticated
   - `GET /admin/users` → 200 admin với pagination, 403, 401
   - `PATCH /admin/users/:id` → 200 deactivate, 400 target admin, 404, 403, 401
