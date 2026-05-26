@@ -1,5 +1,22 @@
 # Change Log — Titra
 
+## 2026-05-26 (91) — Phase 3: Notifications module
+
+**Files added:**
+- `apps/api/src/notifications/dto/send-reminder.dto.ts` (**new**): `SendReminderDto` — required `memberId` string.
+- `apps/api/src/notifications/notifications.service.ts` (**new**): `NotificationsService.sendReminder()` — guards: caller must be ORGANIZER; target member must be ACTIVE and have a registered user account (guests cannot receive email); 24-hour rate-limit per member via `lastReminderAt` (`429`-style `400` with remaining hours in message); updates `lastReminderAt` atomically before sending (prevents double-send on concurrent calls); fires `sendReminderEmail()` as non-blocking background call (`void`). `sendReminderEmail()`: logs in dev when `RESEND_API_KEY` is absent; sends Vietnamese-language HTML reminder via Resend in production with the dashboard link; errors are caught and logged, not thrown.
+- `apps/api/src/notifications/notifications.controller.ts` (**new**): `POST /events/:eventId/reminders` → 200 `{ ok, sentTo, lastReminderAt }`.
+- `apps/api/src/notifications/notifications.module.ts` (**new**): NestJS module wiring controller + service.
+
+**Schema changed:**
+- `apps/api/prisma/schema.prisma`: added `lastReminderAt DateTime?` to `EventMember`.
+- `apps/api/prisma/migrations/20260526_add_last_reminder_at_to_event_members/migration.sql` (**new**): `ALTER TABLE "event_members" ADD COLUMN "lastReminderAt" TIMESTAMP(3)`.
+
+**Files changed:**
+- `apps/api/src/app.module.ts`: registered `NotificationsModule`.
+
+---
+
 ## 2026-05-26 (90) — Phase 3: Settlements module
 
 **Files added:**

@@ -133,6 +133,7 @@ model EventMember {
   inviteTokenExpiry DateTime?
   joinedAt          DateTime     @default(now())
   removedAt         DateTime?
+  lastReminderAt    DateTime?
 
   event               Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user                User?          @relation(fields: [userId], references: [id], onDelete: SetNull)

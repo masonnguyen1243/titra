@@ -370,9 +370,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Notifications module**
 
-- [ ] `POST /events/:id/reminders` — send email reminder to a debtor (organizer only)
-- [ ] Rate-limit check: reject if reminder sent in last 24h for this member
-- [ ] Resend email service (reminder template + PDF download link)
+- [x] `POST /events/:id/reminders` — send email reminder to a debtor (organizer only)
+- [x] Rate-limit check: reject if reminder sent in last 24h for this member
+- [x] Resend email service (reminder template + PDF download link)
 
 **Messages module**
 
