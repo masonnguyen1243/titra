@@ -422,7 +422,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Messages module — missing features**
 
-- [ ] Thêm polling fallback 5 giây ở frontend khi WebSocket không kết nối được — spec §5.8 yêu cầu "fall back to 5-second polling if WebSocket is unavailable"; backend đã có REST endpoint nhưng chat page vẫn dùng mock data, chưa có logic polling (F3)
+- [x] Thêm polling fallback 5 giây ở frontend khi WebSocket không kết nối được — spec §5.8 yêu cầu "fall back to 5-second polling if WebSocket is unavailable"; backend đã có REST endpoint nhưng chat page vẫn dùng mock data, chưa có logic polling (F3)
 
 **Messages module — unit & integration test gaps**
 

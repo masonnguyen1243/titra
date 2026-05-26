@@ -1,5 +1,20 @@
 # Change Log — Titra
 
+## 2026-05-26 (112) — Messages module missing feature F3: WebSocket + REST polling fallback
+
+**Files added / modified:**
+- `apps/web/package.json` — added `socket.io-client@^4.8.3` dependency
+- `apps/web/app/(app)/events/[id]/chat/page.tsx` — fully rewritten from mock data to real API:
+  - **Initial load:** `GET /api/v1/events/:id/messages` on mount
+  - **WebSocket:** connects `socket.io` with `withCredentials: true`; on `connect`, joins the event room and listens for `newMessage`; on disconnect, automatically falls back to polling
+  - **Polling fallback:** 5-second `setInterval` calling `GET /api/v1/events/:id/messages`; starts immediately if WS `connect_error` fires or if socket is not connected within 5 s; stops when WS reconnects
+  - **Send:** uses `socket.emit('sendMessage', ...)` when WS is connected; falls back to `POST /api/v1/events/:id/messages` when offline; draft is restored on send failure
+  - **Dedup:** `mergeMessages()` dedups by message ID so polling and WS events never cause duplicates
+  - **Status banner:** shows "Đang kết nối…" while connecting, "đang tự động cập nhật mỗi 5 giây" when in polling mode
+  - **isMe detection:** calls `GET /api/v1/users/me` to get current user name; messages whose `member.user.name` matches are right-aligned with dark bubble
+
+---
+
 ## 2026-05-26 (111) — Messages module QA fix M4: isActiveMember checks event soft-delete
 
 **Files modified:**

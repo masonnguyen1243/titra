@@ -1,98 +1,70 @@
 'use client';
 
 import { use, useEffect, useRef, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MessageCircle, Send } from 'lucide-react';
+import { MessageCircle, Send, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Avatar } from '@/components/ui/avatar';
 
-interface Message {
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+interface ApiMessage {
   id: string;
-  sender: string;
-  text: string;
-  timestamp: string; // ISO datetime
+  content: string;
+  createdAt: string;
+  member: {
+    id: string;
+    nickname: string | null;
+    user: { name: string; avatarUrl: string | null } | null;
+  };
 }
 
-// "Minh Anh" is the simulated current user for event 1; "Lan" for event 2.
-const CURRENT_USER: Record<string, string> = {
-  '1': 'Minh Anh',
-  '2': 'Lan',
-};
+interface CurrentUser {
+  id: string;
+  name: string;
+}
 
-const SEED_MESSAGES: Record<string, Message[]> = {
-  '1': [
-    {
-      id: 'msg1',
-      sender: 'Hùng',
-      text: 'Mọi người ơi, đặt khách sạn chưa?',
-      timestamp: '2025-03-14T08:12:00',
-    },
-    {
-      id: 'msg2',
-      sender: 'Minh Anh',
-      text: 'Đặt rồi nha, Ana Mandara 2 đêm 😊',
-      timestamp: '2025-03-14T08:15:00',
-    },
-    {
-      id: 'msg3',
-      sender: 'Linh',
-      text: 'Oke bạn ơi, mình đặt xe máy nhé?',
-      timestamp: '2025-03-14T08:20:00',
-    },
-    {
-      id: 'msg4',
-      sender: 'Minh Anh',
-      text: 'Thuê luôn đi, tiện hơn taxi nhiều',
-      timestamp: '2025-03-14T08:22:00',
-    },
-    {
-      id: 'msg5',
-      sender: 'Tuấn',
-      text: 'Sáng thứ 6 mọi người khởi hành lúc mấy giờ?',
-      timestamp: '2025-03-15T07:00:00',
-    },
-    {
-      id: 'msg6',
-      sender: 'Hùng',
-      text: 'Mình đề xuất 6h sáng nha, để kịp ăn sáng Đà Lạt',
-      timestamp: '2025-03-15T07:05:00',
-    },
-    {
-      id: 'msg7',
-      sender: 'Minh Anh',
-      text: 'Ổn, 6h mình có mặt 👌',
-      timestamp: '2025-03-15T07:08:00',
-    },
-  ],
-  '2': [
-    {
-      id: 'msg8',
-      sender: 'Lan',
-      text: 'Đặt bàn nhà hàng Hoa Sen lúc 7h tối nha mọi người',
-      timestamp: '2025-01-19T14:00:00',
-    },
-    {
-      id: 'msg9',
-      sender: 'Dũng',
-      text: 'Được bạn ơi, mình sẽ đến đúng giờ',
-      timestamp: '2025-01-19T14:10:00',
-    },
-    {
-      id: 'msg10',
-      sender: 'Nam',
-      text: 'Mình mang theo vợ được không?',
-      timestamp: '2025-01-19T14:15:00',
-    },
-    {
-      id: 'msg11',
-      sender: 'Lan',
-      text: 'Dĩ nhiên rồi, nhớ báo thêm người để đặt bàn lớn hơn nha',
-      timestamp: '2025-01-19T14:18:00',
-    },
-  ],
-};
+function senderName(msg: ApiMessage): string {
+  return msg.member.user?.name ?? msg.member.nickname ?? 'Guest';
+}
+
+function mergeMessages(existing: ApiMessage[], incoming: ApiMessage[]): ApiMessage[] {
+  const seen = new Set(existing.map((m) => m.id));
+  const fresh = incoming.filter((m) => !seen.has(m.id));
+  if (!fresh.length) return existing;
+  return [...existing, ...fresh].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
+}
+
+async function apiFetchMessages(eventId: string): Promise<ApiMessage[]> {
+  const res = await fetch(`${API}/api/v1/events/${eventId}/messages`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('fetch-failed');
+  const data = (await res.json()) as { messages: ApiMessage[] };
+  return data.messages;
+}
+
+async function apiPostMessage(eventId: string, content: string): Promise<ApiMessage> {
+  const res = await fetch(`${API}/api/v1/events/${eventId}/messages`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) throw new Error('send-failed');
+  return res.json() as Promise<ApiMessage>;
+}
+
+async function apiGetMe(): Promise<CurrentUser> {
+  const res = await fetch(`${API}/api/v1/users/me`, { credentials: 'include' });
+  if (!res.ok) throw new Error('auth-failed');
+  return res.json() as Promise<CurrentUser>;
+}
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
@@ -110,42 +82,130 @@ function isSameDay(a: string, b: string): boolean {
   return a.slice(0, 10) === b.slice(0, 10);
 }
 
-let nextId = 200;
+type ConnectionStatus = 'connecting' | 'connected' | 'polling';
 
 export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [messages, setMessages] = useState<Message[]>(SEED_MESSAGES[id] ?? []);
+  const [messages, setMessages] = useState<ApiMessage[]>([]);
   const [draft, setDraft] = useState('');
-  const currentUser = CURRENT_USER[id] ?? 'Bạn';
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [status, setStatus] = useState<ConnectionStatus>('connecting');
+
+  const socketRef = useRef<Socket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'instant' });
-  }, []);
-
+  // Auto-scroll on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  function handleSend() {
+  // Fetch current user
+  useEffect(() => {
+    void apiGetMe()
+      .then(setCurrentUser)
+      .catch(() => {});
+  }, []);
+
+  // WebSocket + polling fallback
+  useEffect(() => {
+    let polling: ReturnType<typeof setInterval> | null = null;
+    let mounted = true;
+
+    function startPolling() {
+      if (polling) return;
+      if (mounted) setStatus('polling');
+      polling = setInterval(() => {
+        void apiFetchMessages(id)
+          .then((msgs) => {
+            if (mounted) setMessages((prev) => mergeMessages(prev, msgs));
+          })
+          .catch(() => {});
+      }, 5000);
+    }
+
+    function stopPolling() {
+      if (polling) {
+        clearInterval(polling);
+        polling = null;
+      }
+    }
+
+    // Initial message load
+    void apiFetchMessages(id)
+      .then((msgs) => {
+        if (mounted) setMessages(msgs);
+      })
+      .catch(() => {});
+
+    // Attempt WebSocket connection
+    const socket = io(API, {
+      withCredentials: true,
+      transports: ['websocket'],
+      timeout: 5000,
+      reconnectionAttempts: 3,
+    });
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      if (!mounted) return;
+      setStatus('connected');
+      stopPolling();
+      socket.emit('joinRoom', { eventId: id });
+    });
+
+    socket.on('connect_error', () => {
+      if (!mounted || socket.connected) return;
+      startPolling();
+    });
+
+    socket.on('disconnect', () => {
+      if (!mounted) return;
+      startPolling();
+    });
+
+    socket.on('newMessage', (msg: ApiMessage) => {
+      if (!mounted) return;
+      setMessages((prev) => mergeMessages(prev, [msg]));
+    });
+
+    // Hard timeout — if not connected within 5s, start polling
+    const connectTimeout = setTimeout(() => {
+      if (!socket.connected && mounted) startPolling();
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      clearTimeout(connectTimeout);
+      stopPolling();
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [id]);
+
+  async function handleSend() {
     const text = draft.trim();
     if (!text) return;
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `new-${++nextId}`,
-        sender: currentUser,
-        text,
-        timestamp: new Date().toISOString(),
-      },
-    ]);
     setDraft('');
+
+    const socket = socketRef.current;
+    if (socket?.connected) {
+      socket.emit('sendMessage', { eventId: id, content: text }, (msg: ApiMessage) => {
+        setMessages((prev) => mergeMessages(prev, [msg]));
+      });
+    } else {
+      try {
+        const msg = await apiPostMessage(id, text);
+        setMessages((prev) => mergeMessages(prev, [msg]));
+      } catch {
+        setDraft(text);
+      }
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      void handleSend();
     }
   }
 
@@ -154,6 +214,20 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       className="flex flex-col gap-0 rounded-lg border overflow-hidden"
       style={{ height: 'calc(100vh - 22rem)' }}
     >
+      {/* Polling banner */}
+      {status === 'polling' && (
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50 border-b text-xs text-amber-700">
+          <WifiOff className="h-3 w-3 shrink-0" />
+          Không kết nối được WebSocket — đang tự động cập nhật mỗi 5 giây
+        </div>
+      )}
+      {status === 'connecting' && (
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-muted/50 border-b text-xs text-muted-foreground">
+          <span className="inline-block h-2 w-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+          Đang kết nối…
+        </div>
+      )}
+
       {/* Message list */}
       <div className="flex-1 overflow-y-auto p-4 space-y-1">
         {messages.length === 0 ? (
@@ -165,10 +239,11 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
           />
         ) : (
           messages.map((msg, i) => {
-            const isMe = msg.sender === currentUser;
+            const isMe = !!currentUser && senderName(msg) === currentUser.name;
             const prev = messages[i - 1];
-            const showDateSep = !prev || !isSameDay(prev.timestamp, msg.timestamp);
-            const showSender = !isMe && (!prev || prev.sender !== msg.sender || showDateSep);
+            const showDateSep = !prev || !isSameDay(prev.createdAt, msg.createdAt);
+            const showSender =
+              !isMe && (!prev || senderName(prev) !== senderName(msg) || showDateSep);
 
             return (
               <div key={msg.id}>
@@ -176,17 +251,17 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
                   <div className="flex items-center gap-3 py-3">
                     <div className="flex-1 h-px bg-border" />
                     <span className="text-xs text-muted-foreground shrink-0">
-                      {formatDateLabel(msg.timestamp)}
+                      {formatDateLabel(msg.createdAt)}
                     </span>
                     <div className="flex-1 h-px bg-border" />
                   </div>
                 )}
 
                 <div className={cn('flex gap-2.5 mt-1', isMe && 'flex-row-reverse')}>
-                  {/* Avatar — only for others, only when sender changes */}
                   {!isMe && (
                     <Avatar
-                      name={msg.sender}
+                      name={senderName(msg)}
+                      src={msg.member.user?.avatarUrl ?? undefined}
                       size="sm"
                       className={cn('mt-0.5', !showSender && 'invisible')}
                     />
@@ -194,7 +269,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
 
                   <div className={cn('max-w-[72%] space-y-0.5', isMe && 'items-end flex flex-col')}>
                     {showSender && (
-                      <p className="text-xs text-muted-foreground px-1">{msg.sender}</p>
+                      <p className="text-xs text-muted-foreground px-1">{senderName(msg)}</p>
                     )}
                     <div
                       className={cn(
@@ -204,10 +279,10 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
                           : 'bg-muted text-foreground rounded-tl-sm',
                       )}
                     >
-                      {msg.text}
+                      {msg.content}
                     </div>
                     <p className="text-[10px] text-muted-foreground/70 px-1">
-                      {formatTime(msg.timestamp)}
+                      {formatTime(msg.createdAt)}
                     </p>
                   </div>
                 </div>
@@ -230,7 +305,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
         <Button
           size="icon"
           className="h-9 w-9 shrink-0"
-          onClick={handleSend}
+          onClick={() => void handleSend()}
           disabled={!draft.trim()}
           aria-label="Gửi"
         >
