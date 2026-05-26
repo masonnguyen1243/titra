@@ -133,6 +133,10 @@ export class SettlementsService {
       throw new NotFoundException('Sự kiện không tồn tại');
     }
 
+    if (event.status === EventStatus.SETTLED || event.status === EventStatus.ARCHIVED) {
+      throw new BadRequestException('Không thể xác nhận thanh toán trong sự kiện đã kết thúc');
+    }
+
     const callerMember = await this.getActiveMember(eventId, callerId);
     if (!callerMember) {
       throw new ForbiddenException('Bạn không phải thành viên của sự kiện này');

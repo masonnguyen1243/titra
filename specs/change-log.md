@@ -1,5 +1,14 @@
 # Change Log — Titra
 
+## 2026-05-26 (95) — Phase 3: Fix confirmSettlement — guard SETTLED/ARCHIVED event (M4)
+
+**Problem:** `createSettlement` already blocked SETTLED/ARCHIVED events, but `confirmSettlement` had no such guard. A settlement created before the event was closed could still be confirmed after the fact, corrupting historical balances.
+
+**Files changed:**
+- `apps/api/src/settlements/settlements.service.ts`: added `EventStatus` check immediately after the event null-check in `confirmSettlement` — throws `400 BadRequestException` if status is `SETTLED` or `ARCHIVED`.
+
+---
+
 ## 2026-05-26 (94) — Phase 3: Fix confirmSettlement — email organizer on confirmation (F3)
 
 **Problem:** spec §5.5 requires the organizer to receive an email notification when a settlement is confirmed. The service had no email logic and did not even look up the organizer.
