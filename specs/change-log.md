@@ -1,5 +1,26 @@
 # Change Log — Titra
 
+## 2026-05-26 (90) — Phase 3: Settlements module
+
+**Files added:**
+- `apps/api/src/settlements/dto/create-settlement.dto.ts` (**new**): `CreateSettlementDto` — required `fromMemberId`, `toMemberId` (non-empty strings), `amount` (integer ≥ 1); optional `method` (`SettlementMethod` enum, defaults to CASH) and `proofUrl` (`@IsUrl`).
+- `apps/api/src/settlements/settlements.service.ts` (**new**): `SettlementsService` with four methods:
+  - `createSettlement`: verifies event is not SETTLED/ARCHIVED; caller must be ACTIVE member; from ≠ to; both `fromMemberId`/`toMemberId` must belong to the event; creates `Settlement` with `status: PENDING`.
+  - `getSettlements`: verifies event exists; caller must be ACTIVE member; returns all settlements ordered by `createdAt DESC` with `fromMember` and `toMember` included.
+  - `confirmSettlement`: verifies event exists; caller must be ACTIVE member; settlement must be PENDING; only the recipient (`toMember.userId`) or ORGANIZER may confirm; sets `status: CONFIRMED` and `confirmedAt`.
+  - `deleteSettlement`: verifies event exists; caller must be ACTIVE member; settlement must be PENDING (CONFIRMED cannot be deleted); only the payer (`fromMember.userId`) or ORGANIZER may delete.
+- `apps/api/src/settlements/settlements.controller.ts` (**new**): `SettlementsController` at `events/:eventId/settlements` — `POST` → 201, `GET` → 200, `PATCH :settlementId/confirm` → 200, `DELETE :settlementId` → 204.
+- `apps/api/src/settlements/settlements.module.ts` (**new**): NestJS module wiring controller + service.
+- `apps/api/src/settlements/payment-deeplinks.ts` (**new**): two pure utility functions:
+  - `generateMomoDeepLink({ phone, amount, note })` → `{ deepLink, webUrl }`. Deep-link uses `momo://transfer`; web fallback uses `nhantien.momo.vn`.
+  - `generateVNPayDeepLink({ bankAccount, amount, description })` → `{ deepLink, webUrl }`. Deep-link uses `vnpay://transfer`; web fallback uses `vnpay.vn/transfer`.
+
+**Files changed:**
+- `apps/api/src/app.module.ts`: registered `SettlementsModule`.
+
+---
+
+
 All notable changes to the project are documented here.
 Format: `[YYYY-MM-DD] [Phase] Description`
 

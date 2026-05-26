@@ -361,12 +361,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Settlements module**
 
-- [ ] `POST /events/:id/settlements` — record settlement (status: PENDING)
-- [ ] `GET /events/:id/settlements` — list all settlements
-- [ ] `PATCH /events/:id/settlements/:settlementId/confirm` — confirm (recipient or organizer)
-- [ ] `DELETE /events/:id/settlements/:settlementId` — reject / delete PENDING settlement
-- [ ] MoMo deep-link generator utility
-- [ ] VNPay deep-link generator utility
+- [x] `POST /events/:id/settlements` — record settlement (status: PENDING)
+- [x] `GET /events/:id/settlements` — list all settlements
+- [x] `PATCH /events/:id/settlements/:settlementId/confirm` — confirm (recipient or organizer)
+- [x] `DELETE /events/:id/settlements/:settlementId` — reject / delete PENDING settlement
+- [x] MoMo deep-link generator utility
+- [x] VNPay deep-link generator utility
 
 **Notifications module**
 
