@@ -67,7 +67,13 @@ export class MessagesService {
 
   async isActiveMember(eventId: string, userId: string): Promise<boolean> {
     const member = await this.prisma.eventMember.findFirst({
-      where: { eventId, userId, removedAt: null, status: MemberStatus.ACTIVE },
+      where: {
+        eventId,
+        userId,
+        removedAt: null,
+        status: MemberStatus.ACTIVE,
+        event: { deletedAt: null },
+      },
       select: { id: true },
     });
     return !!member;

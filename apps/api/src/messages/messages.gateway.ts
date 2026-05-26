@@ -17,15 +17,26 @@ interface AuthSocket extends Socket {
   user?: JwtPayload;
 }
 
+/** Sliding-window rate limit state tracked per connected socket. */
+interface RateLimitBucket {
+  count: number;
+  windowStart: number;
+}
+
+/** 10 messages per 10-second window per socket. */
+const WS_RATE_LIMIT = { limit: 10, windowMs: 10_000 };
+
 @WebSocketGateway({
   cors: {
-    origin: true, // reflect request origin; restrict via allowlist in production
+    origin: process.env['NEXT_PUBLIC_APP_URL'] ?? 'http://localhost:3000',
     credentials: true,
   },
 })
 export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
+
+  private readonly rateLimitMap = new Map<string, RateLimitBucket>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -50,8 +61,8 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
     }
   }
 
-  handleDisconnect(_socket: AuthSocket) {
-    // no-op — Socket.io cleans up rooms automatically on disconnect
+  handleDisconnect(socket: AuthSocket) {
+    this.rateLimitMap.delete(socket.id);
   }
 
   @SubscribeMessage('joinRoom')
@@ -75,18 +86,44 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
     return { ok: true };
   }
 
+  private checkRateLimit(socketId: string) {
+    const now = Date.now();
+    const bucket = this.rateLimitMap.get(socketId);
+    if (!bucket || now - bucket.windowStart >= WS_RATE_LIMIT.windowMs) {
+      this.rateLimitMap.set(socketId, { count: 1, windowStart: now });
+      return;
+    }
+    if (bucket.count >= WS_RATE_LIMIT.limit) {
+      const retryAfter = Math.ceil((WS_RATE_LIMIT.windowMs - (now - bucket.windowStart)) / 1000);
+      throw new WsException(
+        `Bạn gửi tin nhắn quá nhanh. Vui lòng thử lại sau ${retryAfter} giây.`,
+      );
+    }
+    bucket.count += 1;
+  }
+
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
     @ConnectedSocket() socket: AuthSocket,
     @MessageBody() data: { eventId: string; content: string },
   ) {
     if (!socket.user) throw new WsException('Unauthorized');
+    this.checkRateLimit(socket.id);
+
+    const content = typeof data.content === 'string' ? data.content.trim() : '';
+    if (!content) throw new WsException('Nội dung tin nhắn không được để trống');
+    if (content.length > 2000)
+      throw new WsException('Nội dung tin nhắn không được vượt quá 2000 ký tự');
+
     const message = await this.messagesService.createMessage(
       data.eventId,
       socket.user.sub,
-      data.content,
+      content,
     );
-    this.server.to(`event:${data.eventId}`).emit('newMessage', message);
+    // Broadcast to the room excluding the sender — the sender receives the
+    // message via the acknowledgment return value, so emitting to the full
+    // room (this.server.to) would cause the sender to display it twice.
+    socket.to(`event:${data.eventId}`).emit('newMessage', message);
     return message;
   }
 

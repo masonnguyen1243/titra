@@ -1,5 +1,47 @@
 # Change Log — Titra
 
+## 2026-05-26 (111) — Messages module QA fix M4: isActiveMember checks event soft-delete
+
+**Files modified:**
+- `apps/api/src/messages/messages.service.ts` — `isActiveMember` query now includes `event: { deletedAt: null }` in the Prisma `where` clause. A socket can no longer successfully `joinRoom` for a soft-deleted event because the member lookup returns `null` even when a valid `EventMember` row exists, causing `handleJoinRoom` to throw `WsException`.
+
+---
+
+## 2026-05-26 (110) — Messages module QA fix M3: validate cursor as UUID in GetMessagesDto
+
+**Files modified:**
+- `apps/api/src/messages/dto/get-messages.dto.ts` — replaced `@IsString()` with `@IsUUID()` on the `cursor` field. Invalid cursor values (e.g. `?cursor=foo`) now return HTTP 400 from the global `ValidationPipe` before reaching Prisma, preventing a Prisma runtime error from surfacing as an HTTP 500 with a stack trace.
+
+---
+
+## 2026-05-26 (109) — Messages module QA fix S2: per-socket rate limit on sendMessage
+
+**Files modified:**
+- `apps/api/src/messages/messages.gateway.ts` — added `RateLimitBucket` interface and `WS_RATE_LIMIT` constant (10 messages / 10-second window per socket). Private `checkRateLimit(socketId)` method maintains a sliding-window counter in `rateLimitMap`; throws `WsException` with a Vietnamese retry-after message when the limit is exceeded. `handleSendMessage` calls `checkRateLimit` before any DB work. `handleDisconnect` cleans up the socket's bucket from the map to prevent memory leaks.
+
+---
+
+## 2026-05-26 (108) — Messages module QA fix S1: restrict WebSocket CORS to app origin
+
+**Files modified:**
+- `apps/api/src/messages/messages.gateway.ts` — `@WebSocketGateway` CORS `origin` changed from `true` (reflect any origin) to `process.env['NEXT_PUBLIC_APP_URL'] ?? 'http://localhost:3000'`. Matches the HTTP CORS restriction already in `main.ts`, preventing arbitrary third-party sites from opening credentialed WebSocket connections.
+
+---
+
+## 2026-05-26 (107) — Messages module QA fix F2: sender receives newMessage twice
+
+**Files modified:**
+- `apps/api/src/messages/messages.gateway.ts` — `handleSendMessage` now uses `socket.to(room).emit('newMessage', message)` instead of `this.server.to(room).emit(...)`. `socket.to()` broadcasts to all sockets in the room *except* the sender; the sender receives the message only via the acknowledgment return value, preventing duplicate display on the client.
+
+---
+
+## 2026-05-26 (106) — Messages module QA fix F1: validate WebSocket message content
+
+**Files modified:**
+- `apps/api/src/messages/messages.gateway.ts` — `handleSendMessage` now validates `content` before calling `createMessage`: trims whitespace, rejects empty string with `WsException('Nội dung tin nhắn không được để trống')`, and rejects content over 2000 chars with `WsException('Nội dung tin nhắn không được vượt quá 2000 ký tự')`. Mirrors the constraints already enforced by `SendMessageDto` on the REST path.
+
+---
+
 ## 2026-05-26 (105) — Phase 3: Messages module (REST + Socket.io gateway)
 
 **Files added:**

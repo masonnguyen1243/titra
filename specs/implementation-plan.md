@@ -411,6 +411,30 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] `POST /events/:id/messages` — post a message (REST fallback)
 - [x] Socket.io gateway: `joinRoom`, `leaveRoom`, `sendMessage`, `newMessage` events
 
+**Messages module — QA fixes**
+
+- [x] Fix `handleSendMessage` (WebSocket): nội dung tin nhắn không được validate — WS handler nhận `data.content` thô, không qua DTO, cho phép gửi tin rỗng `""` hoặc string vượt quá 2000 ký tự; REST endpoint đã validate đúng nhưng WebSocket path bỏ qua hoàn toàn (F1)
+- [x] Fix `handleSendMessage` (WebSocket): người gửi nhận tin nhắn 2 lần — gateway vừa trả `message` làm acknowledgment, vừa `emit('newMessage')` đến toàn room kể cả người gửi; client không dedup sẽ hiển thị trùng lặp (F2)
+- [x] Fix CORS trong `MessagesGateway`: `origin: true` phản chiếu mọi origin — bất kỳ website nào cũng có thể mở WebSocket có credential đến server, bypass restriction của HTTP layer. Cần đặt `origin: process.env['NEXT_PUBLIC_APP_URL']` (S1)
+- [x] Thêm rate limit cho WebSocket `sendMessage` — không có giới hạn số tin nhắn/giây trên WS; user có thể spam hàng nghìn message/giây, gây quá tải DB và broadcast noise đến toàn room. Cần throttle per-socket tương tự ThrottlerGuard trên HTTP (S2)
+- [x] Fix `GetMessagesDto`: validate `cursor` là UUID hợp lệ (`@IsUUID()`) — hiện chỉ `@IsString()`, nếu truyền giá trị tuỳ ý (vd: `?cursor=foo`) Prisma ném runtime error không được catch → HTTP 500 có thể lộ stack trace (M3)
+- [x] Fix `isActiveMember`: thêm kiểm tra `deletedAt: null` trên event — hiện chỉ kiểm tra `EventMember`, không kiểm tra event cha có bị soft-delete không; client có thể `joinRoom` vào room của event đã xoá (M4)
+
+**Messages module — missing features**
+
+- [ ] Thêm polling fallback 5 giây ở frontend khi WebSocket không kết nối được — spec §5.8 yêu cầu "fall back to 5-second polling if WebSocket is unavailable"; backend đã có REST endpoint nhưng chat page vẫn dùng mock data, chưa có logic polling (F3)
+
+**Messages module — unit & integration test gaps**
+
+- [ ] Unit tests cho `MessagesService` — không có `.spec.ts`, coverage = 0%, test plan yêu cầu ≥ 80% cho mọi API service (M1)
+  - `getMessages` — member hợp lệ nhận messages; non-member → 403; event không tồn tại → 404; cursor pagination trả đúng `nextCursor`
+  - `createMessage` — tạo message thành công; non-member → 403; event không tồn tại → 404
+  - `isActiveMember` — trả `true` với ACTIVE member, `false` với PENDING hoặc đã remove
+- [ ] Unit tests cho `MessagesGateway` — `handleConnection` từ chối token không hợp lệ/thiếu; `handleJoinRoom` từ chối non-member; `handleSendMessage` lưu message và emit `newMessage` đến room (M1)
+- [ ] Integration tests cho Messages endpoints dùng Supertest + Neon DB — chưa có file `messages.e2e-spec.ts` trong khi auth, events, settlements và notifications đều có (M2)
+  - `GET /events/:id/messages` → 200 với member, 403 với non-member, 401 unauthenticated
+  - `POST /events/:id/messages` → 201 tạo message, 400 nội dung rỗng, 403 non-member
+
 **Export module**
 
 - [ ] `POST /events/:id/export/pdf` — generate PDF report, upload to Cloudinary, return URL
