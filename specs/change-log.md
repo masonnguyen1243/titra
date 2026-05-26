@@ -1,5 +1,24 @@
 # Change Log — Titra
 
+## 2026-05-26 (115) — Export module: PDF generation
+
+**Files added:**
+- `apps/api/src/export/export.module.ts` — NestJS module wiring `ExportController`, `ExportService`, `BalanceService`, and `UploadModule`
+- `apps/api/src/export/export.controller.ts` — `POST /events/:eventId/export/pdf` — JWT-protected, members only
+- `apps/api/src/export/export.service.ts` — fetches event data + balances, calls PDF generator, uploads to Cloudinary, returns `{ url }`
+- `apps/api/src/export/pdf.generator.ts` — builds a multi-section A4 PDF using `@react-pdf/renderer` (`React.createElement` API, no JSX): event summary, expense list, member balances, suggested settlements, settlement history
+
+**Files modified:**
+- `apps/api/src/app.module.ts` — added `ExportModule` to imports
+- `apps/api/package.json` — added `@react-pdf/renderer`, `react`, `react-dom`, `@types/react`, `@types/react-dom`
+
+**Behaviour:**
+- `POST /api/v1/events/:id/export/pdf` → 200 `{ url: "https://res.cloudinary.com/…" }`
+- Any active member can export; non-members get 403, deleted events get 404
+- When Cloudinary is not configured, returns a mock URL (dev mode)
+
+---
+
 ## 2026-05-26 (114) — Messages module integration tests (e2e)
 
 **Files added:**

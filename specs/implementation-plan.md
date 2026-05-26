@@ -437,8 +437,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Export module**
 
-- [ ] `POST /events/:id/export/pdf` — generate PDF report, upload to Cloudinary, return URL
-- [ ] PDF content: event summary, expense list, balance table, settlement history
+- [x] `POST /events/:id/export/pdf` — generate PDF report, upload to Cloudinary, return URL
+- [x] PDF content: event summary, expense list, balance table, settlement history
 
 **Admin module**
 
