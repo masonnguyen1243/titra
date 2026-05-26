@@ -426,12 +426,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Messages module — unit & integration test gaps**
 
-- [ ] Unit tests cho `MessagesService` — không có `.spec.ts`, coverage = 0%, test plan yêu cầu ≥ 80% cho mọi API service (M1)
+- [x] Unit tests cho `MessagesService` — không có `.spec.ts`, coverage = 0%, test plan yêu cầu ≥ 80% cho mọi API service (M1)
   - `getMessages` — member hợp lệ nhận messages; non-member → 403; event không tồn tại → 404; cursor pagination trả đúng `nextCursor`
   - `createMessage` — tạo message thành công; non-member → 403; event không tồn tại → 404
   - `isActiveMember` — trả `true` với ACTIVE member, `false` với PENDING hoặc đã remove
-- [ ] Unit tests cho `MessagesGateway` — `handleConnection` từ chối token không hợp lệ/thiếu; `handleJoinRoom` từ chối non-member; `handleSendMessage` lưu message và emit `newMessage` đến room (M1)
-- [ ] Integration tests cho Messages endpoints dùng Supertest + Neon DB — chưa có file `messages.e2e-spec.ts` trong khi auth, events, settlements và notifications đều có (M2)
+- [x] Unit tests cho `MessagesGateway` — `handleConnection` từ chối token không hợp lệ/thiếu; `handleJoinRoom` từ chối non-member; `handleSendMessage` lưu message và emit `newMessage` đến room (M1)
+- [x] Integration tests cho Messages endpoints dùng Supertest + Neon DB — chưa có file `messages.e2e-spec.ts` trong khi auth, events, settlements và notifications đều có (M2)
   - `GET /events/:id/messages` → 200 với member, 403 với non-member, 401 unauthenticated
   - `POST /events/:id/messages` → 201 tạo message, 400 nội dung rỗng, 403 non-member
 

@@ -1,5 +1,29 @@
 # Change Log — Titra
 
+## 2026-05-26 (114) — Messages module integration tests (e2e)
+
+**Files added:**
+- `apps/api/test/messages.e2e-spec.ts` — 17 integration tests against the real Neon DB covering:
+  - `GET /events/:id/messages`: 200 for organizer and member, correct response shape, `nextCursor: null` when page not full, 400 for invalid UUID cursor, 403 for non-member, 401 unauthenticated, 404 for non-existent event
+  - `POST /events/:id/messages`: 201 for organizer and member, posted message appears in GET history, 400 for empty/oversized/missing content, 403 for non-member, 401 unauthenticated, 404 for non-existent event
+
+---
+
+## 2026-05-26 (113) — Messages module unit tests: MessagesService + MessagesGateway
+
+**Files added:**
+- `apps/api/src/messages/messages.service.spec.ts` — 15 unit tests covering:
+  - `getMessages`: returns messages in chronological order, correct `nextCursor` when full/partial page, passes cursor to Prisma, 404 when event not found, 403 when non-member
+  - `createMessage`: creates message, 404 when event not found, 403 when non-member
+  - `isActiveMember`: returns `true` for ACTIVE member, `false` when no matching row, queries with correct filters including `event: { deletedAt: null }`
+- `apps/api/src/messages/messages.gateway.spec.ts` — 11 unit tests covering:
+  - `handleConnection`: sets `socket.user` with valid token (auth field or cookie), disconnects on missing token, disconnects on verification failure
+  - `handleJoinRoom`: joins room for active member, throws `WsException` for unauthenticated socket, throws `WsException` for non-member
+  - `handleSendMessage`: saves message and broadcasts to room excluding sender, returns message as ack, throws for unauthenticated, empty content, content > 2000 chars, rate limit exceeded
+  - `handleDisconnect`: clears rate-limit bucket on disconnect
+
+---
+
 ## 2026-05-26 (112) — Messages module missing feature F3: WebSocket + REST polling fallback
 
 **Files added / modified:**
