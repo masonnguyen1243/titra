@@ -1,5 +1,42 @@
 # Change Log — Titra
 
+## 2026-05-26 (102) — Phase 3: Fix rate-limit TOCTOU race condition in sendReminder (S1) + mark S3 done
+
+**File changed:**
+- `apps/api/src/notifications/notifications.service.ts`
+
+**Problem (S1):** The old pattern was read → check → write. Two concurrent requests could both read `lastReminderAt = null`, both pass the check, and both proceed to send an email — violating the 24-hour per-member limit.
+
+**Fix:** Replaced the separate read-check and write steps with a single atomic `updateMany` that includes the cooldown condition in its `WHERE` clause:
+```
+WHERE id = :memberId AND (lastReminderAt IS NULL OR lastReminderAt < :cooldownThreshold)
+```
+Only one of two concurrent requests will successfully update the row (`count = 1`); the other sees `count = 0` and is rejected. The previously-fetched `lastReminderAt` is still used to compute the human-readable remaining hours in the error message.
+
+**Also marked done (S3):** Fix reminder link → `/events/:eventId` was already applied in entry 101 when the email template was rewritten; marking the checklist item as complete.
+
+---
+
+## 2026-05-26 (101) — Phase 3: Fix reminder email — amount owed, event link, MoMo/VNPay links (F4)
+
+**File changed:**
+- `apps/api/src/notifications/notifications.service.ts`
+
+**Problem:** The reminder email only contained the event name and a generic `/dashboard` link. Spec §5.7 requires four mandatory contents: event name, amount owed, a link to the specific event, and MoMo/VNPay payment links.
+
+**Changes:**
+1. Added `SettlementStatus` import from `@prisma/client`.
+2. Extended the `targetMember` Prisma query to also fetch `paidExpenses`, `expenseSplits`, `sentSettlements` (CONFIRMED), and `receivedSettlements` (CONFIRMED).
+3. Calculated `amountOwed` using the same formula as `BalancesController`: `net = totalPaid − totalOwed + settlementsPaid − settlementsReceived`; if net < 0, `amountOwed = Math.abs(net)`, otherwise 0.
+4. Updated `sendReminderEmail()` to accept `eventId` and `amountOwed` parameters.
+5. Email now includes:
+   - Amount owed formatted as VND (e.g. `150.000 ₫`)
+   - Direct link to `/events/:eventId`
+   - Generic MoMo (`nhantien.momo.vn`) and VNPay (`vnpay.vn`) payment links
+   - Link to `/events/:eventId/settlements` to record payment in-app
+
+---
+
 ## 2026-05-26 (100) — Phase 3: Integration tests for Settlements endpoints (M1)
 
 **Files added:**

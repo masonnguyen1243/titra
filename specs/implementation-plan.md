@@ -395,9 +395,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Notifications module — QA fixes**
 
-- [ ] Fix reminder email: thêm số tiền đang nợ, link đến event cụ thể (`/events/:eventId`), và payment link MoMo/VNPay — spec §5.7 yêu cầu bốn nội dung bắt buộc; hiện tại email chỉ có tên event và link `/dashboard`. Cần truyền `eventId` và balance data vào `sendReminderEmail()` (F4)
-- [ ] Fix race condition ở rate limit: pattern read→check→write có TOCTOU window — hai request cùng lúc đều vượt qua check và gửi 2 email. Cần dùng conditional update kiểm tra `count` row affected = 1 (S1)
-- [ ] Fix reminder link trỏ về `/dashboard`: cần link trực tiếp đến `/events/:eventId` để người nhận không phải tự tìm event (S3)
+- [x] Fix reminder email: thêm số tiền đang nợ, link đến event cụ thể (`/events/:eventId`), và payment link MoMo/VNPay — spec §5.7 yêu cầu bốn nội dung bắt buộc; hiện tại email chỉ có tên event và link `/dashboard`. Cần truyền `eventId` và balance data vào `sendReminderEmail()` (F4)
+- [x] Fix race condition ở rate limit: pattern read→check→write có TOCTOU window — hai request cùng lúc đều vượt qua check và gửi 2 email. Cần dùng conditional update kiểm tra `count` row affected = 1 (S1)
+- [x] Fix reminder link trỏ về `/dashboard`: cần link trực tiếp đến `/events/:eventId` để người nhận không phải tự tìm event (S3)
 
 **Notifications module — unit & integration test gaps**
 
