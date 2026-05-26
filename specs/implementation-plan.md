@@ -380,11 +380,11 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Settlements module — unit & integration test gaps**
 
-- [ ] Unit tests cho `SettlementsService` — không có `.spec.ts`, coverage = 0%, test plan yêu cầu ≥ 80% (M1)
+- [x] Unit tests cho `SettlementsService` — không có `.spec.ts`, coverage = 0%, test plan yêu cầu ≥ 80% (M1)
   - `createSettlement` — happy path, event SETTLED/ARCHIVED → 400, fromId = toId → 400, unknown member → 404
   - `confirmSettlement` — recipient ✓, organizer ✓, non-recipient → 403, already CONFIRMED → 400
   - `deleteSettlement` — payer ✓, organizer ✓, recipient ✓ (sau fix F2), non-authorized → 403, CONFIRMED → 400
-- [ ] Integration tests cho Settlements endpoints dùng Supertest + Neon DB (M1)
+- [x] Integration tests cho Settlements endpoints dùng Supertest + Neon DB (M1)
   - `POST` → 201 PENDING; `PATCH confirm` → 200 CONFIRMED, non-recipient → 403; `DELETE` → 204 PENDING, CONFIRMED → 400
 
 **Notifications module**

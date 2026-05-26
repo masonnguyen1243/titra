@@ -1,5 +1,39 @@
 # Change Log — Titra
 
+## 2026-05-26 (100) — Phase 3: Integration tests for Settlements endpoints (M1)
+
+**Files added:**
+- `apps/api/test/settlements.e2e-spec.ts` (**new**): 23 integration tests (Supertest + Neon DB) covering all four Settlements endpoints.
+
+**Isolation strategy:** per-run `RUN_ID = e2e-sett-${Date.now()}` prefix on emails and event names; stale rows cleaned in `beforeAll`, created rows deleted in `afterAll` (events before users to respect the `organizerId` FK).
+
+**Member setup:** organizer creates the event (auto-added as ORGANIZER member); payer and recipient are inserted directly via Prisma as ACTIVE members, bypassing the invite flow.
+
+**Tests by group:**
+- `POST /settlements` (7 tests): 201 PENDING with correct body; method defaults to CASH; 400 fromId=toId; 400 amount=0; 403 non-member; 404 unknown event; 401 unauthenticated.
+- `GET /settlements` (3 tests): 200 member gets list; 403 non-member; 401 unauthenticated.
+- `PATCH confirm` (6 tests): 200 recipient confirms; 200 organizer confirms; 403 payer (not recipient/organizer); 400 already CONFIRMED; 404 unknown settlement; 401 unauthenticated.
+- `DELETE` (7 tests): 204 payer; 204 recipient; 204 organizer; 403 unrelated member; 400 CONFIRMED; 404 unknown settlement; 401 unauthenticated.
+
+**Side fix:** applied pending DB migration `20260526_add_last_reminder_at_to_event_members` (`ALTER TABLE event_members ADD COLUMN "lastReminderAt" TIMESTAMP(3)`) which was required for `POST /events` to succeed during setup.
+
+---
+
+## 2026-05-26 (99) — Phase 3: Unit tests for SettlementsService (M1)
+
+**Files added:**
+- `apps/api/src/settlements/settlements.service.spec.ts` (**new**): 23 unit tests covering all three public methods.
+
+  **`createSettlement` (8 tests):** happy path → 201 with PENDING status; event not found → 404; event SETTLED → 400; event ARCHIVED → 400; caller not a member → 403; fromId = toId → 400; fromMember not found/ACTIVE → 404; toMember not found/ACTIVE → 404.
+
+  **`confirmSettlement` (7 tests):** recipient can confirm; organizer can confirm; non-recipient/organizer → 403; already CONFIRMED → 400; event SETTLED → 400; event ARCHIVED → 400; settlement not found → 404.
+
+  **`deleteSettlement` (8 tests):** payer can delete; recipient can delete (F2 fix); organizer can delete; non-authorized → 403; CONFIRMED → 400; event not found → 404; settlement not found → 404; caller not a member → 403.
+
+**Implementation note:** Uses `jest.resetAllMocks()` (not `clearAllMocks`) in `beforeEach` to prevent stale `mockResolvedValueOnce` queue entries from leaking between tests when early-exit guards fire before `eventMember.findFirst` is called.
+
+---
+
 ## 2026-05-26 (98) — Phase 3: Fix deep-link generator — encode phone and bankAccount (S2)
 
 **Problem:** `phone` and `bankAccount` were interpolated raw into URLs. A value like `+84912345678` encodes `+` as a space in query strings; values with spaces or special chars break the URL entirely, causing MoMo/VNPay to fail parsing.
