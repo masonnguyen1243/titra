@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,29 +13,61 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { Paperclip, X } from 'lucide-react';
+import { Loader2, Paperclip, X } from 'lucide-react';
+import { useCloudinaryUpload } from '@/lib/hooks/use-upload';
 
 type ExpenseCategory = 'FOOD' | 'TRANSPORT' | 'ACCOMMODATION' | 'ACTIVITY' | 'OTHER';
 
-export interface Member {
+export interface ExpenseDialogMember {
   id: string;
   name: string;
 }
 
-export interface NewExpense {
+export interface ExpenseFormValues {
   description: string;
   amount: number;
+  /** EventMember.id of the payer */
+  paidById: string;
   category: ExpenseCategory;
-  payer: string;
-  date: string;
+  splitType: 'EQUAL' | 'CUSTOM';
+  /** For EQUAL: member IDs to include in the split */
+  memberIds?: string[];
+  /** For CUSTOM: per-member amounts */
+  splits?: { memberId: string; amount: number }[];
+  receiptUrl?: string;
+}
+
+/** Shape used to pre-fill the dialog when editing an existing expense */
+export interface InitialExpense {
+  description: string;
+  amount: number;
+  paidById: string;
+  category: ExpenseCategory;
+  splitType: 'EQUAL' | 'CUSTOM';
+  /** For EQUAL: member IDs from existing splits */
+  splitMemberIds?: string[];
+  /** For CUSTOM: per-member amounts from existing splits */
+  customSplits?: { memberId: string; amount: number }[];
+  receiptUrl?: string | null;
 }
 
 interface AddExpenseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  members: Member[];
-  onAdd: (expense: NewExpense) => void;
+  members: ExpenseDialogMember[];
+  /** Called with the API-ready payload when the form is submitted */
+  onSubmit: (values: ExpenseFormValues) => void | Promise<void>;
+  /** Show spinner on the submit button (e.g. while mutation is in flight) */
+  isSubmitting?: boolean;
+  /** Pre-fill data for edit mode */
+  initialExpense?: InitialExpense;
 }
+
+// ── Keep old Member / NewExpense types as aliases for backward compat ──────────
+/** @deprecated Use ExpenseDialogMember */
+export type Member = ExpenseDialogMember;
+/** @deprecated Use ExpenseFormValues */
+export type NewExpense = ExpenseFormValues;
 
 const CATEGORIES: { value: ExpenseCategory; label: string }[] = [
   { value: 'FOOD', label: 'Ăn uống' },
@@ -46,8 +78,9 @@ const CATEGORIES: { value: ExpenseCategory; label: string }[] = [
 ];
 
 const MAX_RECEIPT_SIZE = 5 * 1024 * 1024;
+const ALLOWED_RECEIPT_TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/heif'];
 
-function getInitialCustomAmounts(members: Member[]) {
+function getInitialCustomAmounts(members: ExpenseDialogMember[]) {
   return Object.fromEntries(members.map((m) => [m.id, '']));
 }
 
@@ -55,8 +88,13 @@ export default function AddExpenseDialog({
   open,
   onOpenChange,
   members,
-  onAdd,
+  onSubmit,
+  isSubmitting = false,
+  initialExpense,
 }: AddExpenseDialogProps) {
+  const isEditMode = initialExpense !== undefined;
+
+  // ── form state ──────────────────────────────────────────────────────────────
   const [description, setDescription] = useState('');
   const [amountRaw, setAmountRaw] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('FOOD');
@@ -68,10 +106,59 @@ export default function AddExpenseDialog({
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>(
     getInitialCustomAmounts(members),
   );
+
+  // ── receipt state ────────────────────────────────────────────────────────────
   const [receipt, setReceipt] = useState<File | null>(null);
   const [receiptError, setReceiptError] = useState('');
+  // ── submit error state (inline message shown inside dialog on failure) ───────
+  const [submitError, setSubmitError] = useState('');
+  /** URL after a successful Cloudinary upload */
+  const [uploadedReceiptUrl, setUploadedReceiptUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const cloudinaryUpload = useCloudinaryUpload();
+
+  // ── populate form from initialExpense when dialog opens ─────────────────────
+  useEffect(() => {
+    if (!open) return;
+    if (initialExpense) {
+      setDescription(initialExpense.description);
+      setAmountRaw(String(initialExpense.amount));
+      setCategory(initialExpense.category);
+      setPayerId(initialExpense.paidById);
+      setSplitMode(initialExpense.splitType);
+      if (initialExpense.splitType === 'EQUAL') {
+        const ids = initialExpense.splitMemberIds ?? members.map((m) => m.id);
+        setSelectedMembers(new Set(ids));
+      } else {
+        const custom = Object.fromEntries(
+          (initialExpense.customSplits ?? []).map((s) => [s.memberId, String(s.amount)]),
+        );
+        setCustomAmounts({ ...getInitialCustomAmounts(members), ...custom });
+      }
+      setUploadedReceiptUrl(initialExpense.receiptUrl ?? null);
+      setReceipt(null);
+      setReceiptError('');
+      setSubmitError('');
+    } else {
+      // add mode — reset to defaults
+      setDescription('');
+      setAmountRaw('');
+      setCategory('FOOD');
+      setPayerId(members[0]?.id ?? '');
+      setSplitMode('EQUAL');
+      setSelectedMembers(new Set(members.map((m) => m.id)));
+      setCustomAmounts(getInitialCustomAmounts(members));
+      setUploadedReceiptUrl(null);
+      setReceipt(null);
+      setReceiptError('');
+      setSubmitError('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // ── derived values ───────────────────────────────────────────────────────────
   const amount = parseInt(amountRaw, 10) || 0;
   const equalCount = selectedMembers.size;
   const perPerson = amount > 0 && equalCount > 0 ? Math.floor(amount / equalCount) : 0;
@@ -88,8 +175,11 @@ export default function AddExpenseDialog({
     description.trim().length > 0 &&
     amount > 0 &&
     payerId !== '' &&
+    !isUploading &&
+    !isSubmitting &&
     (splitMode === 'EQUAL' ? equalCount > 0 : !customMismatch);
 
+  // ── handlers ─────────────────────────────────────────────────────────────────
   function resetForm() {
     setDescription('');
     setAmountRaw('');
@@ -100,11 +190,14 @@ export default function AddExpenseDialog({
     setCustomAmounts(getInitialCustomAmounts(members));
     setReceipt(null);
     setReceiptError('');
+    setUploadedReceiptUrl(null);
+    setIsUploading(false);
+    setSubmitError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   function handleOpenChange(value: boolean) {
-    if (!value) resetForm();
+    if (!value && !isSubmitting && !isUploading) resetForm();
     onOpenChange(value);
   }
 
@@ -117,9 +210,14 @@ export default function AddExpenseDialog({
     });
   }
 
-  function handleReceiptChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleReceiptChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!ALLOWED_RECEIPT_TYPES.includes(file.type)) {
+      setReceiptError('Chỉ chấp nhận ảnh JPG, PNG, HEIC hoặc HEIF.');
+      e.target.value = '';
+      return;
+    }
     if (file.size > MAX_RECEIPT_SIZE) {
       setReceiptError('Ảnh không được vượt quá 5 MB.');
       e.target.value = '';
@@ -127,32 +225,77 @@ export default function AddExpenseDialog({
     }
     setReceiptError('');
     setReceipt(file);
+    setUploadedReceiptUrl(null);
+
+    // Upload immediately on selection
+    setIsUploading(true);
+    try {
+      const url = await cloudinaryUpload.mutateAsync(file);
+      setUploadedReceiptUrl(url);
+    } catch (err) {
+      // AbortError means a newer file selection cancelled this upload intentionally.
+      // Do NOT clear the receipt state — the newer file's handleReceiptChange has
+      // already set its own state and should not be overwritten.
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      setReceiptError('Tải ảnh thất bại — ảnh hoá đơn sẽ không được lưu.');
+      setReceipt(null);
+      setUploadedReceiptUrl(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   function removeReceipt() {
     setReceipt(null);
     setReceiptError('');
+    setUploadedReceiptUrl(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!isValid) return;
-    const payerName = members.find((m) => m.id === payerId)?.name ?? payerId;
-    onAdd({
+
+    const values: ExpenseFormValues = {
       description: description.trim(),
       amount,
+      paidById: payerId,
       category,
-      payer: payerName,
-      date: new Date().toISOString().slice(0, 10),
-    });
-    handleOpenChange(false);
+      splitType: splitMode,
+      ...(uploadedReceiptUrl ? { receiptUrl: uploadedReceiptUrl } : {}),
+    };
+
+    if (splitMode === 'EQUAL') {
+      values.memberIds = [...selectedMembers];
+    } else {
+      values.splits = members
+        .map((m) => ({
+          memberId: m.id,
+          amount: parseInt(customAmounts[m.id] ?? '0', 10) || 0,
+        }))
+        .filter((s) => s.amount > 0);
+    }
+
+    setSubmitError('');
+    try {
+      await onSubmit(values);
+      handleOpenChange(false);
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error ? err.message : 'Không thể lưu chi phí. Vui lòng thử lại.',
+      );
+    }
   }
+
+  const busy = isSubmitting || isUploading;
+  const dialogTitle = isEditMode ? 'Chỉnh sửa chi phí' : 'Thêm chi phí';
+  const submitLabel = isEditMode ? 'Lưu thay đổi' : 'Thêm chi phí';
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Thêm chi phí</DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5">
@@ -349,6 +492,36 @@ export default function AddExpenseDialog({
               <div className="flex items-center gap-2 rounded-lg border px-3 py-2">
                 <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="text-sm truncate flex-1">{receipt.name}</span>
+                {isUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+                ) : (
+                  <>
+                    {uploadedReceiptUrl && (
+                      <span className="text-xs text-green-600 shrink-0">✓</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={removeReceipt}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Xoá ảnh"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : uploadedReceiptUrl && isEditMode ? (
+              // Edit mode: show existing receipt URL
+              <div className="flex items-center gap-2 rounded-lg border px-3 py-2">
+                <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
+                <a
+                  href={uploadedReceiptUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary truncate flex-1 hover:underline"
+                >
+                  Xem ảnh hiện tại
+                </a>
                 <button
                   type="button"
                   onClick={removeReceipt}
@@ -367,7 +540,7 @@ export default function AddExpenseDialog({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/heic"
+                  accept="image/jpeg,image/png,image/heic,image/heif"
                   className="sr-only"
                   onChange={handleReceiptChange}
                 />
@@ -377,12 +550,19 @@ export default function AddExpenseDialog({
           </div>
         </div>
 
+        {submitError && (
+          <p className="text-xs text-destructive" role="alert">
+            {submitError}
+          </p>
+        )}
+
         <DialogFooter className="gap-2 pt-2">
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={busy}>
             Huỷ
           </Button>
-          <Button onClick={handleSubmit} disabled={!isValid}>
-            Thêm chi phí
+          <Button onClick={handleSubmit} disabled={!isValid || busy}>
+            {busy && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+            {isUploading ? 'Đang tải ảnh…' : submitLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

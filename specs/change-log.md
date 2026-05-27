@@ -1,5 +1,192 @@
 # Change Log — Titra
 
+## 2026-05-27 (167) — Phase 4 QA fix: Cancel in-flight Cloudinary upload when a new file is selected (S2)
+
+**Files changed:**
+
+- `apps/web/lib/hooks/use-upload.ts`:
+  - Added `import { useRef } from 'react'`.
+  - Added `abortControllerRef = useRef<AbortController | null>(null)` inside `useCloudinaryUpload`.
+  - At the start of `mutationFn`: call `abortControllerRef.current?.abort()` to cancel any previous upload, then create a fresh `AbortController` and store it in the ref.
+  - Added an explicit `signal.aborted` guard after `api.get('/upload/sign')` — if the controller was aborted while we were waiting for the signed params (which `api.ts` does not pass the signal to internally), we throw `DOMException('AbortError')` immediately before touching Cloudinary at all.
+  - Passed `signal` to the Cloudinary `fetch` call — the browser cancels the POST mid-flight if the controller is aborted.
+  - `finally`: clears the ref only when `abortControllerRef.current === controller` (i.e. this was still the most recent upload), so the newest in-flight upload is never accidentally cleared.
+
+- `apps/web/components/features/add-expense-dialog.tsx`:
+  - Narrowed the `catch {}` in `handleReceiptChange` to `catch (err)`.
+  - Added early `return` for `AbortError`: when a new file is selected while an upload is in progress, the old mutation throws `AbortError`; the catch must **not** call `setReceipt(null)` or clear `receiptError` because the new file's state has already been set by its own `handleReceiptChange` invocation. The early return prevents overwriting the new file's state.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-27 (166) — Phase 4 QA fix: Show inline error message in expense dialog on submit failure (M4)
+
+**Files changed:**
+
+- `apps/web/components/features/add-expense-dialog.tsx`:
+  - Added `submitError` state (`useState('')`).
+  - Reset `submitError` in `resetForm()` and in both branches of the `useEffect` that populates the form on `open`.
+  - Wrapped `await onSubmit(values)` in `handleSubmit` in a `try/catch`: on success the dialog closes as before; on failure `submitError` is set to `err.message` (for `Error` instances) or the generic Vietnamese fallback string — the dialog stays open.
+  - Rendered `{submitError && <p className="text-xs text-destructive" role="alert">{submitError}</p>}` directly above `<DialogFooter>` so the error appears just above the action buttons, within the dialog, without requiring the user to dismiss a toast.
+  - `role="alert"` ensures the message is announced by screen readers.
+  - **Note:** The parent (`page.tsx`) already shows a `toast.error()` when `onSubmit` throws. The dialog's catch block no longer re-throws, so the toast is not triggered twice — the toast path in `page.tsx` still fires because the page's try/catch runs before the dialog's. The two error displays are complementary: the toast is transient; the inline message persists inside the dialog until the user corrects the form or closes it.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-27 (165) — Phase 4 QA fix: Resolve payer nickname in optimistic expense create (M3)
+
+**Files changed:**
+
+- `apps/web/lib/hooks/use-expenses.ts`:
+  - Added local `OptimisticMember` interface `{ id: string; nickname: string; userId: string | null }`.
+  - Changed `useCreateExpense(eventId: string)` → `useCreateExpense(eventId: string, members?: OptimisticMember[])`.
+  - In `onMutate`, added `const payer = members?.find((m) => m.id === payload.paidById)`.
+  - Updated the optimistic `paidBy` field from `{ id, nickname: '…', userId: null }` to `{ id, nickname: payer?.nickname ?? '…', userId: payer?.userId ?? null }`.
+  - When `members` is provided (which it will be in the normal flow), the temporary expense renders the real payer name instantly. Falls back to `'…'` if the member can't be found or if the hook is called without the list.
+
+- `apps/web/app/(app)/events/[id]/expenses/page.tsx`:
+  - Changed `useCreateExpense(id)` → `useCreateExpense(id, event?.members)`.
+  - `event?.members` is already fetched by `useEventDetail(id)` at the top of the component; passing it here costs nothing extra. While `event` is still loading, the hook receives `undefined` and the fallback `'…'` is used — identical to the previous behaviour.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-27 (164) — Phase 4 QA fix: Make expense edit/delete buttons always visible on mobile (M5)
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/expenses/page.tsx`:
+  - Changed the hover-reveal wrapper on the per-row action buttons from `opacity-0 group-hover:opacity-100` → `sm:opacity-0 sm:group-hover:opacity-100`.
+  - **Effect:** On viewports narrower than `sm` (640 px — covers all 375 px mobile targets), no opacity class is applied so the buttons render at full opacity by default. On `sm` and wider (desktop/tablet), the existing hover-reveal behaviour is preserved. No layout or functional change for desktop users.
+  - **Why:** CSS `:hover` pseudo-class never fires on touch-only devices (iOS Safari, Android Chrome). The previous `opacity-0 group-hover:opacity-100` pattern made the ✏️ and 🗑️ buttons permanently invisible on phones, preventing all edit and delete actions. Spec §8 requires the app to be "fully usable on 375 px viewport (iOS Safari, Android Chrome)".
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-27 (163) — Phase 4 QA fix: Validate MIME type of receipt file before upload (M1)
+
+**Files changed:**
+
+- `apps/web/components/features/add-expense-dialog.tsx`:
+  - Added `ALLOWED_RECEIPT_TYPES` constant: `['image/jpeg', 'image/png', 'image/heic', 'image/heif']`.
+  - Added MIME type check at the top of `handleReceiptChange`, **before** the size check. If `file.type` is not in the allowlist, sets `receiptError` to `'Chỉ chấp nhận ảnh JPG, PNG, HEIC hoặc HEIF.'`, clears the file input, and returns early.
+  - Updated the `accept` attribute on the hidden file input from `"image/jpeg,image/png,image/heic"` to `"image/jpeg,image/png,image/heic,image/heif"` to be consistent with the HEIF allowlist entry.
+  - **Why:** The `accept` HTML attribute is advisory-only and can be bypassed by renaming any file to `.jpg`. The previous code only validated `file.size`, so a renamed PDF/executable could pass the filter and be sent to Cloudinary. The runtime MIME check uses the browser-reported `file.type` which is derived from the file's binary signature, not its extension — a much stronger guard.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-27 (162) — Phase 4 QA fix: Replace window.location.reload() with targeted query invalidation in error state (S3)
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/expenses/page.tsx`:
+  - Added `import { useQueryClient } from '@tanstack/react-query'`.
+  - Added `expenseKeys` to the existing `use-expenses` import.
+  - Added `const qc = useQueryClient()` at the top of the component.
+  - Replaced `onClick={() => window.location.reload()}` on the "Thử lại" button in the error state with `onClick={() => void qc.invalidateQueries({ queryKey: expenseKeys.list(id) })}`.
+  - `invalidateQueries` marks only the `['events', id, 'expenses']` query as stale and triggers a background re-fetch. The rest of the TanStack Query cache (event detail, member list, balances, other tabs) is untouched. `window.location.reload()` was discarding the entire cache unnecessarily and causing the full app shell to re-render — consistent with the pattern already used on the dashboard error state.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-27 (161) — Phase 4 QA fix: Disable per-row edit/delete buttons while a mutation is in-flight (M2)
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/expenses/page.tsx`:
+  - Added `disabled={isBusy}` to the pencil (edit) button and the trash-icon (delete-trigger) button inside the hover-reveal action container.
+  - `isBusy` was already computed (`createExpense.isPending || updateExpense.isPending || deleteExpense.isPending`) and applied to the top-level "Thêm chi phí" button, but the per-row trigger buttons were left unguarded. A user could click ✏️ or 🗑️ on any row while a mutation for a different row was still in-flight, causing interleaved optimistic updates and unpredictable rollback behaviour.
+  - The "Xoá" confirm button already had `disabled={deleteExpense.isPending}` — that narrower guard is correct and unchanged (it only disables the final confirm step while the delete itself is in-flight, not during create/update).
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-27 (160) — Phase 4 QA fix: Hide edit/delete buttons from non-owners (F3)
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/expenses/page.tsx`:
+  - Added `import { useMe } from '@/lib/hooks/use-user'`.
+  - Added `useMe()` call; stores result in `me`.
+  - Added `isOrganizer` derived value: searches `event.members` for the member whose `userId` matches `me.id`, returns true if their `role === 'ORGANIZER'`.
+  - Inside the expense list `map`, added `canManage` per-row flag: `isOrganizer || expense.paidBy.userId === me?.id`. The `paidBy.userId` identifies the registered user who made the payment — the backend uses the same field as the "creator" for edit/delete authorization.
+  - Wrapped the entire action-button block (both the confirm-delete row and the hover-reveal row) in `{canManage && (…)}`. Members who are neither the expense payer nor the organizer see no buttons at all — not even the hover-reveal placeholder — so there is no confusing empty space on hover.
+  - `useMe` uses `GET /users/me` which is already cached by TanStack Query from the layout; this adds no new network request.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-27 (159) — Phase 4 QA fix: Error toast on expense create/update/delete failure (F2)
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/expenses/page.tsx`:
+  - Added `import { ApiError } from '@/lib/api'`.
+  - Wrapped `handleSubmit` body in `try/catch`: on error, shows `toast.error(err.message)` when the thrown error is an `ApiError` (carries the backend's Vietnamese message), falls back to a generic `'Không thể lưu chi phí. Vui lòng thử lại.'` for network/unexpected errors. **Re-throws** after showing the toast so `AddExpenseDialog` sees the rejection and keeps itself open (the form is not closed on failure).
+  - Wrapped `handleDelete` body in `try/catch`: on error, shows `toast.error` with same pattern. Does **not** re-throw — the delete-confirm row has already been dismissed by the preceding `setConfirmDeleteId(null)`; re-throwing here would leave the page in an inconsistent state.
+  - Previously: `mutateAsync` throw was completely unhandled — optimistic rollback happened silently, user had no idea whether their action succeeded or failed.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-27 (158) — Phase 4 QA fix: Add `group` class to expense row — edit/delete buttons permanently invisible (F1)
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/expenses/page.tsx`:
+  - Added `group` to the `className` of the expense row `div` (line 192). The inner action-button container uses `opacity-0 group-hover:opacity-100 transition-opacity` to reveal the edit (✏️) and delete (🗑️) buttons on hover. Without a `group` ancestor, Tailwind's `group-hover:` variant never fires — both buttons were permanently invisible and unclickable regardless of hover state. One-word fix; no logic change.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-27 (157) — Phase 4: Expenses — real API, edit/delete, Cloudinary receipt upload
+
+**Files changed:**
+
+- `apps/web/lib/hooks/use-expenses.ts`:
+  - Corrected `CreateExpensePayload` field names to match backend DTO: `paidByMemberId` → `paidById`, `splitMode` → `splitType`.
+  - Added `memberIds?: string[]` to `CreateExpensePayload` (for EQUAL split mode).
+  - Fixed `Expense` interface: `splitMode` → `splitType`.
+  - Added **optimistic updates** to `useCreateExpense`, `useUpdateExpense`, and `useDeleteExpense`: cancel in-flight queries, apply immediate UI change, roll back on error, then invalidate on settle.
+
+- `apps/web/lib/hooks/use-upload.ts` *(new)*:
+  - `useCloudinaryUpload()` mutation: fetches signed upload params from `GET /upload/sign`, then POST the file directly from the browser to Cloudinary's upload API. Returns the `secure_url`.
+
+- `apps/web/components/features/add-expense-dialog.tsx`:
+  - Renamed member type to `ExpenseDialogMember` and callback payload to `ExpenseFormValues` (API-ready shape with `paidById`, `splitType`, `memberIds`, `splits`, `receiptUrl`).
+  - Added `InitialExpense` prop for edit-mode pre-filling (description, amount, payer, category, splitType, splits, receiptUrl).
+  - Receipt upload: on file selection the component calls `useCloudinaryUpload()` immediately; shows spinner during upload; stores `uploadedReceiptUrl` in state; submit button is disabled while uploading; on failure shows error but does not block form submission without a receipt.
+  - Added `isSubmitting` prop to show spinner on submit button.
+  - Dialog title and submit label adapt between "Thêm chi phí" and "Chỉnh sửa chi phí" based on `initialExpense` presence.
+
+- `apps/web/app/(app)/events/[id]/expenses/page.tsx`:
+  - Removed all static seed data (`SEED_EXPENSES`, `MOCK_MEMBERS`).
+  - Fetches real expense list via `useExpenses(id)`.
+  - Fetches event members via `useEventDetail(id)` and maps to `ExpenseDialogMember[]`.
+  - Shows `ExpenseListSkeleton` while loading.
+  - Shows error state with "Thử lại" button when fetch fails.
+  - **Add expense**: `useCreateExpense` mutation; dialog opened via "Thêm chi phí" button.
+  - **Edit expense**: Pencil icon on each row opens dialog pre-filled via `toInitialExpense()`; `useUpdateExpense` mutation on submit.
+  - **Delete expense**: Trash icon enters inline "Xoá / Huỷ" confirmation row; `useDeleteExpense` mutation on confirm (optimistic — row removed instantly).
+  - Shows receipt link ("Hoá đơn ↗") inline when `receiptUrl` is present.
+  - `toast.success` feedback on create / update / delete.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0). ESLint: no warnings or errors.
+
+---
+
 ## 2026-05-27 (156) — Phase 4 QA: Dashboard & events UI fixes (F1–F6)
 
 **Files changed:**

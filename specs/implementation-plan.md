@@ -535,10 +535,23 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Expenses**
 
-- [ ] Expense list fetches real expenses for the event
-- [ ] Add Expense form submits with correct split payload
-- [ ] Edit and delete actions wired up with optimistic UI updates
-- [ ] Receipt photo: upload to Cloudinary via signed URL before form submit
+- [x] Expense list fetches real expenses for the event
+- [x] Add Expense form submits with correct split payload
+- [x] Edit and delete actions wired up with optimistic UI updates
+- [x] Receipt photo: upload to Cloudinary via signed URL before form submit
+
+**Expenses — QA fixes**
+
+- [x] Fix `page.tsx`: thêm class `group` vào div row của từng expense — div wrapper `<div className="flex items-center justify-between ...">` không có `group`, khiến `group-hover:opacity-100` trên div chứa nút edit/delete không bao giờ fire; cả hai nút bị kẹt ở `opacity-0` vĩnh viễn, không thể nhìn thấy hay click (F1 — 🔴 critical)
+- [x] Fix `page.tsx`: thêm `try/catch` vào `handleSubmit` và `handleDelete` để hiển thị `toast.error` khi API call thất bại — hiện tại khi mutateAsync throw, optimistic update rollback xảy ra im lặng, người dùng không biết thao tác thất bại hay thành công (F2 — 🔴 critical)
+- [x] Fix `page.tsx`: ẩn nút edit/delete với các expense mà user không có quyền — spec §5.3 chỉ expense creator hoặc organizer mới được sửa/xoá; hiện tại mọi member đều thấy nút, API sẽ trả 403 nhưng không có error toast (F2) nên user hoàn toàn bị bỏ qua (F3 — 🟠 high)
+- [x] Fix `page.tsx`: áp dụng `disabled={isBusy}` cho nút edit (pencil) và nút trigger xoá (trash icon) trên từng row — `isBusy` đã được tính nhưng chỉ dùng cho nút "Thêm chi phí" ở trên, các nút hành động từng row vẫn clickable khi đang có mutation in-flight (M2 — 🟡 medium)
+- [x] Fix `page.tsx`: thay `window.location.reload()` trong error state bằng `qc.invalidateQueries(expenseKeys.list(id))` — full reload huỷ toàn bộ TanStack Query cache của app (event detail, members, các tab khác) không cần thiết; pattern nhất quán với dashboard (S3 — 🟡 medium)
+- [x] Fix `add-expense-dialog.tsx`: kiểm tra MIME type của file khi chọn ảnh hoá đơn — `handleReceiptChange` chỉ validate `file.size`, không validate `file.type`; user có thể đặt tên file `.jpg` cho bất kỳ định dạng nào và bypass `accept` attribute; nên reject nếu `file.type` không thuộc `['image/jpeg', 'image/png', 'image/heic', 'image/heif']` (M1 — 🟡 medium)
+- [x] Fix `add-expense-dialog.tsx`: hiển thị nút edit/delete luôn visible trên mobile thay vì dùng hover-reveal — pattern `opacity-0 group-hover:opacity-100` không hoạt động trên touch device; spec §8 yêu cầu "fully usable on 375px viewport (iOS Safari, Android Chrome)" (M5 — 🟡 medium)
+- [x] Fix `use-expenses.ts`: truyền `members` list vào optimistic create để resolve nickname payer thực — hiện tại temporary expense hiển thị `nickname: '…'` cho payer cho đến khi query re-fetch xong (M3 — 🟢 low)
+- [x] Fix `add-expense-dialog.tsx`: hiển thị error message inline trong dialog khi submit thất bại — hiện tại nếu `onSubmit` throw, dialog giữ nguyên nhưng không có thông báo lỗi nào bên trong, chỉ có thể kết hợp với F2 fix để show toast ở ngoài (M4 — 🟢 low)
+- [x] Fix `use-upload.ts`: huỷ in-flight upload trước khi bắt đầu upload mới khi user chọn lại file — nếu user thay file nhanh, nhiều signed param được fetch và nhiều file được POST lên Cloudinary tạo orphaned assets (S2 — 🟢 low)
 
 **Balances**
 
