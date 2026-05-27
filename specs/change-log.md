@@ -1,5 +1,25 @@
 # Change Log — Titra
 
+## 2026-05-27 (156) — Phase 4 QA: Dashboard & events UI fixes (F1–F6)
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/members/page.tsx`:
+  - **F1** — Added `isError` from `useEventDetail`; renders an `AlertCircle` error banner ("Không thể tải danh sách thành viên") instead of silently showing "0 thành viên" when the API fails.
+  - **F4** — Added `.catch()` on `navigator.clipboard.writeText()` that fires a `toast.error` when clipboard access is denied (HTTP context or permission rejected).
+  - **F5** — Destructured `isLoading: isInviteLoading` from `useInviteLink`; while loading the invite link renders a `Skeleton` placeholder instead of the raw `…` character; Copy button is disabled while loading.
+
+- `apps/web/app/(app)/events/[id]/layout.tsx`:
+  - **F2** — Changed `STATUS_VARIANTS.SETTLED` from `'warning'` to `'outline'` to match the canonical `StatusBadge` component (`status-badge.tsx`).
+  - **F6** — Tab navigation (`<nav>`) is now conditionally rendered only when `!isError`, preventing clickable tabs from appearing when the event returns 404 or 403.
+
+- `apps/web/app/(app)/events/new/page.tsx`:
+  - **F3** — After a cover photo is selected (preview is shown), an amber info banner is displayed: "Ảnh bìa sẽ chưa được tải lên — tính năng này đang được phát triển." — the event is still created normally without the image.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
 ## 2026-05-27 (155) — Phase 4: Event detail fetches event data and member list
 
 **Files changed:**

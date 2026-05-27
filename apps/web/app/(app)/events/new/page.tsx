@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ImagePlus, X } from 'lucide-react';
+import { ImagePlus, Info, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -195,6 +195,15 @@ export default function NewEventPage() {
               )}
               {coverError && (
                 <p className="text-sm text-destructive">{coverError}</p>
+              )}
+              {coverPreview && !coverError && (
+                <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+                  <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span>
+                    Ảnh bìa sẽ chưa được tải lên — tính năng này đang được phát triển. Sự kiện sẽ
+                    vẫn được tạo bình thường.
+                  </span>
+                </div>
               )}
               <input
                 ref={fileInputRef}

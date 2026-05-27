@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Check, Copy, Link2, UserX } from 'lucide-react';
+import { AlertCircle, Check, Copy, Link2, UserX } from 'lucide-react';
 import {
   useEventDetail,
   useInviteLink,
@@ -34,7 +34,7 @@ const ROLE_VARIANTS: Record<MemberRole, 'default' | 'secondary'> = {
 
 export default function MembersPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { data: event, isLoading } = useEventDetail(id);
+  const { data: event, isLoading, isError } = useEventDetail(id);
   const { data: me } = useMe();
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -44,7 +44,7 @@ export default function MembersPage({ params }: { params: Promise<{ id: string }
   const isOrganizer = myMember?.role === 'ORGANIZER';
 
   // Invite link is only accessible to organizers (backend enforces 403 for non-organizers)
-  const { data: inviteData } = useInviteLink(isOrganizer ? id : '');
+  const { data: inviteData, isLoading: isInviteLoading } = useInviteLink(isOrganizer ? id : '');
 
   const { mutate: removeMember, isPending: isRemoving } = useRemoveMember(id);
 
@@ -57,6 +57,8 @@ export default function MembersPage({ params }: { params: Promise<{ id: string }
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      toast.error('Không thể sao chép liên kết. Vui lòng sao chép thủ công.');
     });
   }
 
@@ -85,10 +87,20 @@ export default function MembersPage({ params }: { params: Promise<{ id: string }
               <p className="text-sm font-medium">Link mời tham gia</p>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex-1 min-w-0 rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground font-mono truncate">
-                {inviteData?.inviteLink ?? '…'}
-              </div>
-              <Button variant="outline" size="sm" onClick={handleCopy} className="shrink-0">
+              {isInviteLoading ? (
+                <Skeleton className="flex-1 h-9 rounded-md" />
+              ) : (
+                <div className="flex-1 min-w-0 rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground font-mono truncate">
+                  {inviteData?.inviteLink ?? '—'}
+                </div>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopy}
+                disabled={isInviteLoading || !inviteData?.inviteLink}
+                className="shrink-0"
+              >
                 {copied ? (
                   <Check className="h-4 w-4 mr-1.5 text-green-600" />
                 ) : (
@@ -113,6 +125,11 @@ export default function MembersPage({ params }: { params: Promise<{ id: string }
                 </div>
               </div>
             ))}
+          </div>
+        ) : isError ? (
+          <div className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3.5 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>Không thể tải danh sách thành viên. Vui lòng thử tải lại trang.</span>
           </div>
         ) : (
           <>

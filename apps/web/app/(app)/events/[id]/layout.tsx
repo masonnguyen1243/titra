@@ -21,9 +21,9 @@ const STATUS_LABELS: Record<EventStatus, string> = {
   ARCHIVED: 'Đã lưu trữ',
 };
 
-const STATUS_VARIANTS: Record<EventStatus, 'success' | 'warning' | 'secondary'> = {
+const STATUS_VARIANTS: Record<EventStatus, 'success' | 'outline' | 'secondary'> = {
   ACTIVE: 'success',
-  SETTLED: 'warning',
+  SETTLED: 'outline',
   ARCHIVED: 'secondary',
 };
 
@@ -105,30 +105,32 @@ export default function EventLayout({
         )}
       </div>
 
-      {/* Tab navigation */}
-      <div className="border-b">
-        <nav aria-label="Tab điều hướng sự kiện" className="-mb-px flex gap-0 overflow-x-auto">
-          {TABS.map(({ label, segment }) => {
-            const href = `/events/${id}/${segment}`;
-            const isActive = pathname === href || pathname.startsWith(`${href}/`);
-            return (
-              <Link
-                key={segment}
-                href={href}
-                aria-current={isActive ? 'page' : undefined}
-                className={cn(
-                  'whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
-                  isActive
-                    ? 'border-foreground text-foreground'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50',
-                )}
-              >
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+      {/* Tab navigation — hidden when event could not be loaded */}
+      {!isError && (
+        <div className="border-b">
+          <nav aria-label="Tab điều hướng sự kiện" className="-mb-px flex gap-0 overflow-x-auto">
+            {TABS.map(({ label, segment }) => {
+              const href = `/events/${id}/${segment}`;
+              const isActive = pathname === href || pathname.startsWith(`${href}/`);
+              return (
+                <Link
+                  key={segment}
+                  href={href}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={cn(
+                    'whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
+                    isActive
+                      ? 'border-foreground text-foreground'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50',
+                  )}
+                >
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      )}
 
       {/* Tab content */}
       <div className="pt-6">{children}</div>

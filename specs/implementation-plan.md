@@ -524,6 +524,15 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Create Event form submits → redirects to new event detail page
 - [x] Event detail fetches event data and member list
 
+**Dashboard & events — QA fixes**
+
+- [x] Fix members page: thêm xử lý `isError` — khi API lỗi, trang hiện tại render im lặng "0 thành viên" thay vì hiển thị thông báo lỗi (F1 — 🔴 high)
+- [x] Fix SETTLED badge: layout.tsx dùng `variant: 'warning'` nhưng `StatusBadge` component dùng `variant: 'outline'` — cần thống nhất một trong hai (F2 — 🔴 high)
+- [x] Fix Create Event: thêm cảnh báo UI khi ảnh bìa được chọn nhưng sẽ không được upload (Cloudinary chưa implement) — hiện tại ảnh bị bỏ qua im lặng, người dùng không biết (F3 — 🟠 medium)
+- [x] Fix members page: thêm `.catch()` cho `navigator.clipboard.writeText()` — nếu clipboard bị từ chối (HTTP hoặc permission denied), lỗi bị nuốt im lặng không có feedback (F4 — 🟠 medium)
+- [x] Fix members page: thêm skeleton loading trong card invite link trong khi `inviteData` đang load — hiện tại hiển thị ký tự `…` thay vì Skeleton component đồng bộ với phần còn lại của trang (F5 — 🟡 low)
+- [x] Fix event layout: ẩn/disable tab bar khi event ở trạng thái lỗi (404/403) — hiện tại tabs vẫn render và có thể click khi event không tìm thấy (F6 — 🟡 low)
+
 **Expenses**
 
 - [ ] Expense list fetches real expenses for the event
