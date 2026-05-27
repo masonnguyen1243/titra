@@ -1,7 +1,7 @@
 # Implementation Plan — Titra
 
 **Version:** 0.2
-**Last updated:** 2026-05-24
+**Last updated:** 2026-05-27
 
 ---
 
@@ -558,11 +558,31 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Balance tab fetches `/balances` endpoint and renders simplified transaction list
 - [x] Live recalculates after any expense create/edit/delete
 
+**Balances — QA fixes**
+
+- [x] Fix `balances/page.tsx`: thêm nút "Thử lại" vào error state — hiện tại chỉ render text "Vui lòng thử lại" không có action nào; so sánh với expenses page đã có `onClick={() => void qc.invalidateQueries(expenseKeys.list(id))}` (M2 — 🟠 medium)
+
+**Expenses — QA fixes (Round 2)**
+
+- [ ] Fix `add-expense-dialog.tsx`: không thể xoá ảnh hoá đơn khi chỉnh sửa expense — khi user click "Xoá ảnh" trong edit mode, `uploadedReceiptUrl` được set thành `null` nhưng `handleSubmit` gửi `...(uploadedReceiptUrl ? { receiptUrl } : {})` nên `receiptUrl` bị omit hoàn toàn; backend `updateExpense` chỉ patch khi `!== undefined`, khiến ảnh cũ vẫn còn trong DB. Cần truyền `receiptUrl: null` tường minh để clear (M1 — 🟠 medium)
+
+**Backend — QA fixes**
+
+- [ ] Fix `expenses.service.ts` `createExpense()`: thiếu guard `SETTLED`/`ARCHIVED` — hàm select `status` từ DB nhưng không bao giờ kiểm tra giá trị đó; member có thể thêm expense mới vào event đã chốt; `updateExpense` và `deleteExpense` đã có guard đúng ở line 68 và 115 nhưng `createExpense` thì không. Cần thêm guard tương tự ngay sau khi kiểm tra `!event` (F4 — 🔴 critical)
+
 **Settlements**
 
 - [ ] Settlement list fetches real data with status badges
 - [ ] Record Settlement form submits and shows PENDING entry immediately
 - [ ] Confirm and reject buttons wired to API; balance view updates after confirm
+
+**Settlements — QA fixes**
+
+- [ ] Fix `use-settlements.ts`: đổi `'BANK_TRANSFER'` → `'OTHER'` trong `PaymentMethod` type — Prisma schema định nghĩa `enum SettlementMethod { MOMO VNPAY CASH OTHER }`, không có `BANK_TRANSFER`; giá trị này sẽ gây Prisma validation error khi được gửi lên backend (M3 — 🟠 medium)
+- [ ] Fix `record-settlement-dialog.tsx`: thêm MoMo/VNPay deep-link khi chọn phương thức tương ứng — spec §5.6 yêu cầu "selecting MoMo or VNPay generates a tappable deep-link pre-filled with the correct amount"; backend util `payment-deeplinks.ts` đã có nhưng không có path nào gọi đến nó từ frontend; cần render link/QR tappable ngay dưới payment method selector (F3 — 🟠 high)
+- [ ] Fix `record-settlement-dialog.tsx`: thêm validation MIME type cho file proof — `handleProofChange` chỉ kiểm tra `file.size`, không kiểm tra `file.type`; khác với expense dialog đã fix ở entry 163; file được rename tuỳ ý sẽ bypass `accept` attribute và được gửi mà không qua guard (M4 — 🟠 medium)
+- [ ] Fix `record-settlement-dialog.tsx`: upload proof screenshot lên Cloudinary trước khi submit — dialog hiện chỉ track `hasProof: boolean` từ local state; không có `useCloudinaryUpload` call; khi settlements page được wire vào API, `proofUrl` sẽ luôn là `null/undefined`; cần dùng cùng pattern với `add-expense-dialog.tsx` (M4 — 🟠 medium)
+- [ ] Thêm UI confirm và reject cho PENDING settlement — settlements page hiển thị danh sách nhưng không có nút "Xác nhận" (cho người nhận) hay "Từ chối" (cho organizer/người nhận); spec §5.5 yêu cầu recipient hoặc organizer có thể confirm, và organizer hoặc recipient có thể reject; `useConfirmSettlement` và `useDeleteSettlement` đã có trong hook nhưng chưa được gọi (F4 — 🔴 critical)
 
 **Reminders**
 
@@ -576,6 +596,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [ ] Fetch message history via REST on load
 - [ ] Send message over WebSocket; append to list on `newMessage` event
 - [ ] Fall back to polling if WebSocket connection fails
+
+**Chat — QA fixes**
+
+- [ ] Fix `chat/page.tsx`: dùng `api.ts` wrapper thay vì raw `fetch()` — `apiFetchMessages`, `apiPostMessage`, `apiGetMe` bypass timeout 30 giây của `api.ts`, không có retry cycle khi token hết hạn (401 không tự refresh), và lỗi session hiển thị chuỗi `'auth-failed'` không redirect về `/login` (S2 — 🟠 medium)
+- [ ] Fix `chat/page.tsx`: thêm `maxLength` attribute vào chat `<Input>` — backend và WebSocket gateway enforce 2000 ký tự nhưng input không có giới hạn client-side; người dùng gõ quá 2000 ký tự sẽ chỉ nhận lỗi từ server mà không có cảnh báo trước (M6 — 🟡 low)
+- [ ] Fix `chat/page.tsx`: xoá hằng số `API` hardcode — `const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'` trùng với logic trong `api.ts`; nếu env var thay đổi, chat page có thể bị bỏ sót (S2 — 🟡 low)
 
 **PDF export**
 

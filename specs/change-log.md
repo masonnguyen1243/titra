@@ -1,5 +1,19 @@
 # Change Log — Titra
 
+## 2026-05-27 (169) — Balances QA fix: Add "Thử lại" retry button to error state (M2)
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/balances/page.tsx`:
+  - Added `import { useQueryClient } from '@tanstack/react-query'`.
+  - Added `import { Button } from '@/components/ui/button'`.
+  - Added `import { useBalances, balanceKeys } from '@/lib/hooks/use-balances'` (added `balanceKeys` to existing import).
+  - Added `const qc = useQueryClient()` inside the component.
+  - Updated the `isError` branch: added a `<Button size="sm" variant="outline">Thử lại</Button>` that calls `qc.invalidateQueries({ queryKey: balanceKeys.detail(id) })` on click, consistent with the retry pattern already used in the expenses page.
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
 ## 2026-05-27 (168) — Phase 4: Wire Balances tab to live API
 
 **Tasks completed:**

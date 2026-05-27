@@ -1,11 +1,13 @@
 'use client';
 
 import { use } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { TrendingUp, TrendingDown, Minus, ArrowRight, PartyPopper } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useBalances } from '@/lib/hooks/use-balances';
+import { useBalances, balanceKeys } from '@/lib/hooks/use-balances';
 
 function formatVND(amount: number): string {
   return Math.round(amount).toLocaleString('vi-VN') + ' ₫';
@@ -46,6 +48,7 @@ function BalancesSkeleton() {
 
 export default function BalancesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const qc = useQueryClient();
   const { data, isLoading, isError } = useBalances(id);
 
   if (isLoading) {
@@ -58,6 +61,13 @@ export default function BalancesPage({ params }: { params: Promise<{ id: string 
         <p className="text-sm text-destructive">
           Không thể tải dữ liệu số dư. Vui lòng thử lại.
         </p>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => void qc.invalidateQueries({ queryKey: balanceKeys.detail(id) })}
+        >
+          Thử lại
+        </Button>
       </div>
     );
   }
