@@ -1,5 +1,25 @@
 # Change Log — Titra
 
+## 2026-05-27 (168) — Phase 4: Wire Balances tab to live API
+
+**Tasks completed:**
+- Balance tab fetches `/balances` endpoint and renders simplified transaction list
+- Live recalculates after any expense create/edit/delete
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/balances/page.tsx`:
+  - Removed all static mock data (`SEED_EXPENSES`, `MOCK_MEMBERS`, local `computeNetBalances`/`simplifyDebts` functions).
+  - Imports and calls `useBalances(id)` from `@/lib/hooks/use-balances`.
+  - Shows `BalancesSkeleton` while loading (per-member rows + suggestion rows with `Skeleton` components matching the final layout).
+  - Shows a Vietnamese error message when `isError` is true.
+  - Renders `data.members` for the "Số dư từng người" section — each row shows `Avatar`, `nickname`, and coloured `net` amount with `TrendingUp`/`TrendingDown`/`Minus` icons.
+  - Renders `data.settlements` for the "Ai cần trả ai" section — each row shows `fromNickname → toNickname` and formatted amount; falls back to the "Mọi người đã huề cả làng 🎉" empty state when the array is empty.
+  - **Live recalculation** is already covered: `useCreateExpense`, `useUpdateExpense`, and `useDeleteExpense` all call `qc.invalidateQueries(['events', eventId, 'balances'])` in `onSettled`, which triggers a re-fetch of the balances query automatically.
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
 ## 2026-05-27 (167) — Phase 4 QA fix: Cancel in-flight Cloudinary upload when a new file is selected (S2)
 
 **Files changed:**

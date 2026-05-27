@@ -555,8 +555,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Balances**
 
-- [ ] Balance tab fetches `/balances` endpoint and renders simplified transaction list
-- [ ] Live recalculates after any expense create/edit/delete
+- [x] Balance tab fetches `/balances` endpoint and renders simplified transaction list
+- [x] Live recalculates after any expense create/edit/delete
 
 **Settlements**
 
