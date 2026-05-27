@@ -2,12 +2,16 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { ImagePlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { useCreateEvent } from '@/lib/hooks/use-events';
+import { ApiError } from '@/lib/api';
 
 type EventType = 'TRIP' | 'MEAL' | 'OTHER';
 
@@ -20,6 +24,9 @@ const EVENT_TYPES: { value: EventType; label: string; emoji: string }[] = [
 ];
 
 export default function NewEventPage() {
+  const router = useRouter();
+  const { mutate: createEvent, isPending } = useCreateEvent();
+
   const [name, setName] = useState('');
   const [type, setType] = useState<EventType>('TRIP');
   const [description, setDescription] = useState('');
@@ -65,7 +72,27 @@ export default function NewEventPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // API call wired in Phase 4
+    createEvent(
+      {
+        name: name.trim(),
+        type,
+        description: description.trim() || undefined,
+        // coverImageUrl will be wired once Cloudinary upload is implemented
+      },
+      {
+        onSuccess: (newEvent) => {
+          toast.success('Sự kiện đã được tạo!');
+          router.push(`/events/${newEvent.id}`);
+        },
+        onError: (err) => {
+          const message =
+            err instanceof ApiError
+              ? err.message
+              : 'Không thể tạo sự kiện. Vui lòng thử lại.';
+          toast.error(message);
+        },
+      },
+    );
   }
 
   return (
@@ -180,10 +207,10 @@ export default function NewEventPage() {
 
             {/* Actions */}
             <div className="flex gap-3 pt-1">
-              <Button type="submit" disabled={!name.trim()} className="flex-1">
-                Tạo sự kiện
+              <Button type="submit" disabled={!name.trim() || isPending} className="flex-1">
+                {isPending ? 'Đang tạo…' : 'Tạo sự kiện'}
               </Button>
-              <Button variant="outline" asChild>
+              <Button variant="outline" asChild disabled={isPending}>
                 <Link href="/dashboard">Huỷ</Link>
               </Button>
             </div>

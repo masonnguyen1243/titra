@@ -520,9 +520,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Dashboard & events**
 
-- [ ] Dashboard fetches and renders real event list
-- [ ] Create Event form submits → redirects to new event detail page
-- [ ] Event detail fetches event data and member list
+- [x] Dashboard fetches and renders real event list
+- [x] Create Event form submits → redirects to new event detail page
+- [x] Event detail fetches event data and member list
 
 **Expenses**
 

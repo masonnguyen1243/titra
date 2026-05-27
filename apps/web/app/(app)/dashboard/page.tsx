@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { Users, Calendar, MapPin } from 'lucide-react';
 import {
@@ -12,49 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { StatusBadge } from '@/components/ui/status-badge';
-
-type EventType = 'TRIP' | 'MEAL' | 'OTHER';
-type EventStatus = 'ACTIVE' | 'SETTLED' | 'ARCHIVED';
-
-interface EventCard {
-  id: string;
-  name: string;
-  type: EventType;
-  status: EventStatus;
-  memberCount: number;
-  description?: string;
-  date: string;
-}
-
-const MOCK_EVENTS: EventCard[] = [
-  {
-    id: '1',
-    name: 'Đà Lạt Weekend',
-    type: 'TRIP',
-    status: 'ACTIVE',
-    memberCount: 6,
-    description: 'Chuyến đi Đà Lạt 3 ngày 2 đêm',
-    date: '2026-05-20',
-  },
-  {
-    id: '2',
-    name: 'Tất niên 2025',
-    type: 'MEAL',
-    status: 'SETTLED',
-    memberCount: 12,
-    description: 'Bữa tất niên cùng team',
-    date: '2026-01-15',
-  },
-  {
-    id: '3',
-    name: 'Phú Quốc',
-    type: 'TRIP',
-    status: 'ARCHIVED',
-    memberCount: 4,
-    description: 'Nghỉ hè Phú Quốc',
-    date: '2025-08-10',
-  },
-];
+import { EventCardsSkeleton } from '@/components/ui/skeletons';
+import { useEvents, type EventType } from '@/lib/hooks/use-events';
 
 const TYPE_LABELS: Record<EventType, string> = {
   TRIP: 'Chuyến đi',
@@ -62,8 +23,9 @@ const TYPE_LABELS: Record<EventType, string> = {
   OTHER: 'Khác',
 };
 
-
 export default function DashboardPage() {
+  const { data: events, isLoading, isError } = useEvents();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -78,7 +40,22 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {MOCK_EVENTS.length === 0 ? (
+      {isLoading && <EventCardsSkeleton count={3} />}
+
+      {isError && (
+        <EmptyState
+          icon={MapPin}
+          title="Không thể tải danh sách chuyến đi"
+          description="Đã xảy ra lỗi khi tải dữ liệu. Vui lòng thử lại."
+          bordered
+        >
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Thử lại
+          </Button>
+        </EmptyState>
+      )}
+
+      {!isLoading && !isError && events?.length === 0 && (
         <EmptyState
           icon={MapPin}
           title="Bạn chưa có chuyến đi nào"
@@ -89,26 +66,30 @@ export default function DashboardPage() {
             <Link href="/events/new">Tạo chuyến đi đầu tiên</Link>
           </Button>
         </EmptyState>
-      ) : (
+      )}
+
+      {!isLoading && !isError && events && events.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {MOCK_EVENTS.map((event) => (
+          {events.map((event) => (
             <Card key={event.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="gap-2">
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-base">{event.name}</CardTitle>
                   <StatusBadge status={event.status} className="shrink-0" />
                 </div>
-                {event.description && <CardDescription>{event.description}</CardDescription>}
+                {event.description && (
+                  <CardDescription>{event.description}</CardDescription>
+                )}
               </CardHeader>
 
               <CardContent className="flex items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Users className="h-3.5 w-3.5" />
-                  {event.memberCount} thành viên
+                  {event._count.members} thành viên
                 </span>
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3.5 w-3.5" />
-                  {new Date(event.date).toLocaleDateString('vi-VN')}
+                  {new Date(event.createdAt).toLocaleDateString('vi-VN')}
                 </span>
               </CardContent>
 

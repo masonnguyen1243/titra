@@ -1,5 +1,64 @@
 # Change Log — Titra
 
+## 2026-05-27 (155) — Phase 4: Event detail fetches event data and member list
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/layout.tsx`:
+  - Removed `MOCK_EVENTS` record and local `MockEvent` interface.
+  - Imported `useEventDetail`, `EventType`, `EventStatus` from `@/lib/hooks/use-events` and `Skeleton` from `@/components/ui/skeleton`.
+  - Calls `useEventDetail(id)` to fetch real event name, description, type, status, and active member count (`event.members.length`).
+  - **Loading state:** skeleton placeholders for the title row, description line, member count, and both badge chips.
+  - **Error state:** "Không tìm thấy sự kiện" with an explanatory sub-line (covers both 404 and 403 cases).
+  - **Loaded state:** renders real `event.name`, `event.description`, `event.type`, `event.status`, and `event.members.length` — identical layout to the previous mock rendering.
+  - Tab navigation unchanged; `id` still drives all `href` values.
+
+- `apps/web/app/(app)/events/[id]/members/page.tsx`:
+  - Removed all mock data (`MOCK_MEMBERS`, `DEFAULT_MEMBERS`, `INVITE_TOKENS`, `CURRENT_USER_ID`).
+  - Removed `useEffect` that was constructing a fake invite URL.
+  - Imported `useEventDetail`, `useInviteLink`, `useRemoveMember`, `MemberRole` from events hooks; `useMe` from user hook; `Skeleton` and `toast`.
+  - `useEventDetail(id)` — member list comes from the same cached response as the layout (no extra network request).
+  - `useMe()` — identifies the current user by `me.id`; used to mark the logged-in member as "(bạn)" and to detect organizer status via `myMember.role === 'ORGANIZER'`.
+  - `useInviteLink(id)` — only enabled when the current user is the organizer (passing `''` otherwise disables the query). Invite link section hidden from non-organizers entirely.
+  - `useRemoveMember(id)` — remove button calls the real `DELETE /events/:id/members/:memberId` endpoint; shows "Đang xoá…" while in-flight; shows success/error toasts; closes the confirm dialog on completion.
+  - Guest detection: members with `userId === null` get a "Khách" outline badge instead of the role badge.
+  - **Loading skeleton:** 3 placeholder rows (avatar circle + name + role chip) while event data loads.
+  - TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-27 (154) — Phase 4: Create Event form submits → redirects to new event detail page
+
+**Files changed:**
+- `apps/web/app/(app)/events/new/page.tsx`:
+  - Added imports: `useRouter` (next/navigation), `toast` (sonner), `useCreateEvent` (hooks), `ApiError` (api).
+  - Added `useRouter()` and `useCreateEvent()` — destructured `mutate: createEvent` and `isPending`.
+  - Replaced the stub `handleSubmit` with a real implementation: calls `createEvent({ name, type, description })`, trims whitespace before sending, omits `coverImageUrl` (Cloudinary upload is a later task).
+  - `onSuccess` → shows `toast.success('Sự kiện đã được tạo!')` then `router.push('/events/<newEvent.id>')`.
+  - `onError` → shows `toast.error` with the `ApiError.message` when available, falls back to a generic Vietnamese message.
+  - Submit button: disabled while `isPending` or when `name` is blank; label changes to `'Đang tạo…'` during the request.
+  - Cancel button: disabled while `isPending` to prevent navigation mid-flight.
+  - Cover photo UI kept as-is (preview, remove, file validation) — will be wired to Cloudinary in the "Receipt photo: upload to Cloudinary" task.
+  - TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-27 (153) — Phase 4: Dashboard fetches and renders real event list
+
+**Files changed:**
+- `apps/web/app/(app)/dashboard/page.tsx`:
+  - Added `'use client'` directive — converted from a static server component to a client component.
+  - Removed all `MOCK_EVENTS` static data and the local `EventCard` interface.
+  - Imported `useEvents` and `EventType` from `@/lib/hooks/use-events`.
+  - Imported `EventCardsSkeleton` from `@/components/ui/skeletons`.
+  - Uses `isLoading` state → renders `<EventCardsSkeleton count={3} />` while fetching.
+  - Uses `isError` state → renders an `<EmptyState>` with a "Thử lại" reload button.
+  - Uses `events?.length === 0` → renders the existing "Bạn chưa có chuyến đi nào" empty state.
+  - Maps over real `events` array: `_count.members` for member count, `createdAt` for the date display.
+  - TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
 ## 2026-05-27 (152) — Phase 4 QA fix: Hide email from check-email URL — use sessionStorage (S2)
 
 **Files changed:**

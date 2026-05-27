@@ -4,47 +4,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { use } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Users, ArrowLeft } from 'lucide-react';
-
-type EventType = 'TRIP' | 'MEAL' | 'OTHER';
-type EventStatus = 'ACTIVE' | 'SETTLED' | 'ARCHIVED';
-
-interface MockEvent {
-  id: string;
-  name: string;
-  type: EventType;
-  status: EventStatus;
-  memberCount: number;
-  description?: string;
-}
-
-const MOCK_EVENTS: Record<string, MockEvent> = {
-  '1': {
-    id: '1',
-    name: 'Đà Lạt Weekend',
-    type: 'TRIP',
-    status: 'ACTIVE',
-    memberCount: 6,
-    description: 'Chuyến đi Đà Lạt 3 ngày 2 đêm',
-  },
-  '2': {
-    id: '2',
-    name: 'Tất niên 2025',
-    type: 'MEAL',
-    status: 'SETTLED',
-    memberCount: 12,
-    description: 'Bữa tất niên cùng team',
-  },
-  '3': {
-    id: '3',
-    name: 'Phú Quốc',
-    type: 'TRIP',
-    status: 'ARCHIVED',
-    memberCount: 4,
-    description: 'Nghỉ hè Phú Quốc',
-  },
-};
+import { useEventDetail, type EventType, type EventStatus } from '@/lib/hooks/use-events';
 
 const TYPE_LABELS: Record<EventType, string> = {
   TRIP: 'Chuyến đi',
@@ -81,13 +44,7 @@ export default function EventLayout({
 }) {
   const { id } = use(params);
   const pathname = usePathname();
-  const event = MOCK_EVENTS[id] ?? {
-    id,
-    name: `Chuyến đi #${id}`,
-    type: 'OTHER' as EventType,
-    status: 'ACTIVE' as EventStatus,
-    memberCount: 0,
-  };
+  const { data: event, isLoading, isError } = useEventDetail(id);
 
   return (
     <div className="space-y-0">
@@ -101,22 +58,51 @@ export default function EventLayout({
           Quay lại
         </Link>
 
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold">{event.name}</h1>
-            {event.description && (
-              <p className="text-muted-foreground text-sm">{event.description}</p>
-            )}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground pt-0.5">
-              <Users className="h-3.5 w-3.5" />
-              {event.memberCount} thành viên
+        {isLoading && (
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-56" />
+              <Skeleton className="h-4 w-72" />
+              <Skeleton className="h-4 w-28 mt-0.5" />
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-6 w-24 rounded-full" />
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Badge variant="outline">{TYPE_LABELS[event.type]}</Badge>
-            <Badge variant={STATUS_VARIANTS[event.status]}>{STATUS_LABELS[event.status]}</Badge>
+        )}
+
+        {isError && (
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-muted-foreground">
+              Không tìm thấy sự kiện
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Sự kiện không tồn tại hoặc bạn không có quyền truy cập.
+            </p>
           </div>
-        </div>
+        )}
+
+        {!isLoading && !isError && event && (
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold">{event.name}</h1>
+              {event.description && (
+                <p className="text-muted-foreground text-sm">{event.description}</p>
+              )}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground pt-0.5">
+                <Users className="h-3.5 w-3.5" />
+                {event.members.length} thành viên
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Badge variant="outline">{TYPE_LABELS[event.type]}</Badge>
+              <Badge variant={STATUS_VARIANTS[event.status]}>
+                {STATUS_LABELS[event.status]}
+              </Badge>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tab navigation */}
