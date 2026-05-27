@@ -508,15 +508,15 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Auth — QA fixes**
 
-- [ ] Fix middleware `getRoleFromAccessToken`: thiếu base64 padding trước khi gọi `atob()` — JWT payload là base64url không có `=`; Edge Runtime `atob()` ném `DOMException`; `try/catch` silently trả `null`; guard `if (role !== null && role !== 'ADMIN')` không bao giờ fire → non-admin user có `access_token` hợp lệ vẫn qua được admin route và thấy admin shell. Cần thêm padding: `base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')` trước khi decode (F1 — critical)
-- [ ] Fix `check-email/page.tsx`: hiển thị cứng "15 phút" nhưng `VERIFICATION_TOKEN_TTL_HOURS = 24` trong `auth.service.ts` — người dùng tưởng link hết hạn sau 15 phút, bỏ email hợp lệ và resend không cần thiết. Sửa thành "24 giờ" (F2)
-- [ ] Fix `AppLayout`: thay `<a href="...">` bằng Next.js `<Link>` cho cả hai nav link `/dashboard` và `/admin` — `<a>` gây full page reload mỗi lần navigate, huỷ toàn bộ TanStack Query cache và React component state (F3)
-- [ ] Wire Google OAuth button ở trang login và register — nút "Tiếp tục với Google" hiện `type="button"` không có `onClick` handler, click không có tác dụng; spec §5.1 yêu cầu "User can log in with Google OAuth" — acceptance criterion hoàn toàn chưa được đáp ứng (F4)
-- [ ] Thêm `<Suspense>` wrapper cho `useSearchParams()` trong `check-email/page.tsx` — Next.js App Router yêu cầu điều này cho Client Component; thiếu wrapper gây build warning và flash UI branch "Quay lại đăng ký" sai trước khi hydrate với email từ URL (M1)
-- [ ] Thêm logout button/user menu vào `AppLayout` — `useLogout` hook đã tồn tại và clear query cache đúng, nhưng không có UI nào trong app shell để gọi nó; người dùng không có cách đăng xuất (M2)
-- [ ] Redirect user đã có session ra khỏi auth pages `/login`, `/register` — middleware chỉ guard `(app)` routes, không block người dùng đã đăng nhập quay lại auth forms; nên kiểm tra cookie và redirect về `/dashboard` nếu đã có session (M3)
-- [ ] Fix `api.ts`: lưu `window.location.pathname` vào `sessionStorage` làm `returnUrl` trước khi redirect sang `/login` khi nhận 401 → sau khi re-auth, dùng `returnUrl` để quay lại đúng trang thay vì luôn về `/dashboard` (S1)
-- [ ] Ẩn địa chỉ email khỏi URL query param ở check-email page — `/check-email?email=user@example.com` lộ email vào browser history, server access logs và `Referer` header; nên truyền qua `router.push` với `state` object hoặc lưu vào `sessionStorage` trước khi navigate (S2)
+- [x] Fix middleware `getRoleFromAccessToken`: thiếu base64 padding trước khi gọi `atob()` — JWT payload là base64url không có `=`; Edge Runtime `atob()` ném `DOMException`; `try/catch` silently trả `null`; guard `if (role !== null && role !== 'ADMIN')` không bao giờ fire → non-admin user có `access_token` hợp lệ vẫn qua được admin route và thấy admin shell. Cần thêm padding: `base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')` trước khi decode (F1 — critical)
+- [x] Fix `check-email/page.tsx`: hiển thị cứng "15 phút" nhưng `VERIFICATION_TOKEN_TTL_HOURS = 24` trong `auth.service.ts` — người dùng tưởng link hết hạn sau 15 phút, bỏ email hợp lệ và resend không cần thiết. Sửa thành "24 giờ" (F2)
+- [x] Fix `AppLayout`: thay `<a href="...">` bằng Next.js `<Link>` cho cả hai nav link `/dashboard` và `/admin` — `<a>` gây full page reload mỗi lần navigate, huỷ toàn bộ TanStack Query cache và React component state (F3)
+- [x] Wire Google OAuth button ở trang login và register — nút "Tiếp tục với Google" hiện `type="button"` không có `onClick` handler, click không có tác dụng; spec §5.1 yêu cầu "User can log in with Google OAuth" — acceptance criterion hoàn toàn chưa được đáp ứng (F4)
+- [x] Thêm `<Suspense>` wrapper cho `useSearchParams()` trong `check-email/page.tsx` — Next.js App Router yêu cầu điều này cho Client Component; thiếu wrapper gây build warning và flash UI branch "Quay lại đăng ký" sai trước khi hydrate với email từ URL (M1)
+- [x] Thêm logout button/user menu vào `AppLayout` — `useLogout` hook đã tồn tại và clear query cache đúng, nhưng không có UI nào trong app shell để gọi nó; người dùng không có cách đăng xuất (M2)
+- [x] Redirect user đã có session ra khỏi auth pages `/login`, `/register` — middleware chỉ guard `(app)` routes, không block người dùng đã đăng nhập quay lại auth forms; nên kiểm tra cookie và redirect về `/dashboard` nếu đã có session (M3)
+- [x] Fix `api.ts`: lưu `window.location.pathname` vào `sessionStorage` làm `returnUrl` trước khi redirect sang `/login` khi nhận 401 → sau khi re-auth, dùng `returnUrl` để quay lại đúng trang thay vì luôn về `/dashboard` (S1)
+- [x] Ẩn địa chỉ email khỏi URL query param ở check-email page — `/check-email?email=user@example.com` lộ email vào browser history, server access logs và `Referer` header; nên truyền qua `router.push` với `state` object hoặc lưu vào `sessionStorage` trước khi navigate (S2)
 
 **Dashboard & events**
 

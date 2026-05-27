@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -12,6 +12,9 @@ import { Separator } from '@/components/ui/separator';
 import { useLogin } from '@/lib/hooks/use-auth';
 import { ApiError } from '@/lib/api';
 
+const GOOGLE_AUTH_URL =
+  (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000') + '/api/v1/auth/google';
+
 export default function LoginPage() {
   const router = useRouter();
   const { mutate: login, isPending } = useLogin();
@@ -19,13 +22,31 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  // Show error toast when the backend redirects back with ?error=oauth_failed
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'oauth_failed') {
+      toast.error('Đăng nhập Google thất bại. Vui lòng thử lại.');
+      // Remove the query param so it doesn't persist on refresh
+      const url = new URL(window.location.href);
+      url.searchParams.delete('error');
+      window.history.replaceState(null, '', url.toString());
+    }
+  }, []);
+
+  function handleGoogleLogin() {
+    window.location.href = GOOGLE_AUTH_URL;
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     login(
       { email, password },
       {
         onSuccess: () => {
-          router.push('/dashboard');
+          const returnUrl = sessionStorage.getItem('returnUrl') ?? '/dashboard';
+          sessionStorage.removeItem('returnUrl');
+          router.push(returnUrl);
         },
         onError: (err) => {
           const message =
@@ -101,7 +122,13 @@ export default function LoginPage() {
             </span>
           </div>
 
-          <Button variant="outline" className="w-full" type="button" disabled={isPending}>
+          <Button
+            variant="outline"
+            className="w-full"
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={isPending}
+          >
             <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

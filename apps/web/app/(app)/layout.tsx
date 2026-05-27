@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
+import { LogoutButton } from '@/components/features/logout-button';
 import { cookies } from 'next/headers';
 
 async function getRoleFromAccessToken(): Promise<string | null> {
@@ -27,15 +29,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <span className="font-semibold text-lg tracking-tight">Titra</span>
         <Separator orientation="vertical" className="h-5" />
         <nav className="flex items-center gap-4 text-sm text-muted-foreground">
-          <a href="/dashboard" className="hover:text-foreground transition-colors">
+          <Link href="/dashboard" className="hover:text-foreground transition-colors">
             Chuyến đi
-          </a>
+          </Link>
           {isAdmin && (
-            <a href="/admin" className="hover:text-foreground transition-colors">
+            <Link href="/admin" className="hover:text-foreground transition-colors">
               Quản trị
-            </a>
+            </Link>
           )}
         </nav>
+        <div className="ml-auto">
+          <LogoutButton />
+        </div>
       </header>
       <main className="flex-1 container max-w-5xl mx-auto py-8 px-4">{children}</main>
     </div>

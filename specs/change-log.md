@@ -1,5 +1,124 @@
 # Change Log — Titra
 
+## 2026-05-27 (152) — Phase 4 QA fix: Hide email from check-email URL — use sessionStorage (S2)
+
+**Files changed:**
+- `apps/web/app/(auth)/register/page.tsx` (`onSuccess` handler):
+  - Replaced `router.push('/check-email?email=' + encodeURIComponent(email))` with:
+    1. `sessionStorage.setItem('pendingVerificationEmail', email)` — stores the email browser-side only.
+    2. `router.push('/check-email')` — no query param in the URL.
+  - The email never appears in the URL, browser history, server access logs, or `Referer` headers.
+- `apps/web/app/(auth)/check-email/page.tsx`:
+  - Removed `useSearchParams` import (no longer needed).
+  - `CheckEmailContent` now uses `useState('')` + `useEffect` to read `sessionStorage.getItem('pendingVerificationEmail')` on mount.
+  - The `sessionStorage` key is intentionally **not cleared** on read — it stays available if the component re-mounts (e.g., dev fast-refresh) and expires naturally when the tab closes.
+  - `Suspense` wrapper is kept as a structural boundary providing the skeleton during client-side navigation.
+  - Build verified: no `useSearchParams` warning, route compiles cleanly.
+
+---
+
+## 2026-05-27 (151) — Phase 4 QA fix: Persist returnUrl in sessionStorage for post-login redirect (S1)
+
+**Files changed:**
+- `apps/web/lib/api.ts` (401 handler):
+  - Before `window.location.href = '/login'`, saves `window.location.pathname + window.location.search` into `sessionStorage` under key `'returnUrl'`.
+  - Only stored when `returnUrl !== '/login'` to avoid storing a self-redirect loop.
+  - Pathname + search only (not full `href`) to prevent open-redirect: the login page will only navigate to an internal path.
+- `apps/web/app/(auth)/login/page.tsx` (handleSubmit `onSuccess`):
+  - Reads `sessionStorage.getItem('returnUrl')` after successful login.
+  - Falls back to `'/dashboard'` when the key is absent (normal direct login, no 401 trigger).
+  - Removes the key with `sessionStorage.removeItem('returnUrl')` before navigating so it's consumed exactly once.
+  - Uses `router.push(returnUrl)` for client-side navigation.
+
+---
+
+## 2026-05-27 (150) — Phase 4 QA fix: Redirect authenticated users away from auth pages (M3)
+
+**Files changed:**
+- `apps/web/middleware.ts`:
+  - Added `AUTH_ONLY_PREFIXES = ['/login', '/register', '/forgot-password']` constant.
+  - Added `isAuthOnlyRoute(pathname)` helper — matches exact path or any sub-path of the prefixes.
+  - Added guard as step 1 in `middleware()`: `if (isAuthOnlyRoute(pathname) && hasSession(request))` → `redirect('/dashboard')`. Runs before all other checks so it short-circuits immediately.
+  - `/check-email` is intentionally excluded from `AUTH_ONLY_PREFIXES` — a freshly registered user still needs to reach that screen even while a session cookie may exist.
+  - Renumbered existing inline comments (step 3 admin check → step 4) to keep them accurate.
+
+---
+
+## 2026-05-27 (149) — Phase 4 QA fix: Add logout button to AppLayout (M2)
+
+**Files changed:**
+- `apps/web/components/features/logout-button.tsx` *(new)*: Client component `LogoutButton`.
+  - Calls `useLogout()` mutation on click → `POST /auth/logout` → `qc.clear()` (via hook's `onSuccess`).
+  - On success: `router.push('/login')` to redirect the user after clearing the session.
+  - On error: shows a Vietnamese error toast; does not redirect (allows retry).
+  - Button label switches to "Đang đăng xuất…" and is disabled while the mutation is in flight.
+- `apps/web/app/(app)/layout.tsx`:
+  - Added `import { LogoutButton }`.
+  - Added `<div className="ml-auto"><LogoutButton /></div>` at the right end of the header, after the nav links.
+  - `ml-auto` pushes the button flush-right inside the flex header.
+
+---
+
+## 2026-05-27 (148) — Phase 4 QA fix: Add <Suspense> wrapper for useSearchParams() in check-email page (M1)
+
+**Files changed:**
+- `apps/web/app/(auth)/check-email/page.tsx` (full rewrite):
+  - Extracted the card content (which calls `useSearchParams()`) into a new inner `CheckEmailContent` component.
+  - Added a `CheckEmailSkeleton` component — a skeleton-card fallback shown while the Suspense boundary resolves the search params during SSR.
+  - Default export `CheckEmailPage` now wraps `<CheckEmailContent>` in `<Suspense fallback={<CheckEmailSkeleton />}>`.
+  - **Why needed:** Next.js App Router suspends `useSearchParams()` during server rendering. Without the boundary, the build emitted a warning ("useSearchParams() should be wrapped in a suspense boundary") and the SSR pass rendered `email = ''`, causing the "Quay lại đăng ký" branch to flash incorrectly for a brief moment before client hydration resolved the real email value from the URL.
+  - Build verified: no `useSearchParams` warning after the change.
+
+---
+
+## 2026-05-27 (147) — Phase 4 QA fix: Wire Google OAuth button on login and register pages (F4)
+
+**Files changed:**
+- `apps/web/app/(auth)/login/page.tsx`:
+  - Added module-level `GOOGLE_AUTH_URL` constant: `${NEXT_PUBLIC_API_URL}/api/v1/auth/google`.
+  - Added `handleGoogleLogin()` function that sets `window.location.href = GOOGLE_AUTH_URL` — a full-page navigation required for the Passport redirect-based OAuth flow.
+  - Added `onClick={handleGoogleLogin}` to the "Tiếp tục với Google" button.
+  - Added `useEffect` on mount: reads `?error=oauth_failed` from the URL (set by the backend on OAuth failure), shows a Vietnamese error toast, then removes the param from the URL with `history.replaceState` so it doesn't persist on refresh.
+- `apps/web/app/(auth)/register/page.tsx`:
+  - Added same `GOOGLE_AUTH_URL` constant and `handleGoogleLogin()` function.
+  - Added `onClick={handleGoogleLogin}` to the "Tiếp tục với Google" button.
+  - Register and login share the same OAuth entry-point — Google does not distinguish between new and returning users; `auth.service.googleLogin()` creates a new user if one doesn't exist.
+
+**Flow:** Click → `window.location.href` → `GET /api/v1/auth/google` → Passport redirects to Google consent → Google redirects to `/api/v1/auth/google/callback` → backend sets HttpOnly JWT cookies → redirects to `/dashboard` (or `/login?error=oauth_failed` on failure).
+
+---
+
+## 2026-05-27 (146) — Phase 4 QA fix: Replace <a> with Next.js <Link> in AppLayout nav (F3)
+
+**Files changed:**
+- `apps/web/app/(app)/layout.tsx`:
+  - Added `import Link from 'next/link'`.
+  - Replaced `<a href="/dashboard">` with `<Link href="/dashboard">`.
+  - Replaced `<a href="/admin">` with `<Link href="/admin">`.
+  - Using `<a>` caused a full browser page reload on every nav click, destroying the entire TanStack Query cache and all in-flight React state (forms, scroll position, open dialogs).
+  - `<Link>` uses the Next.js client-side router — navigation is instant, the cache is preserved, and only the changed page segment re-renders.
+
+---
+
+## 2026-05-27 (145) — Phase 4 QA fix: Fix check-email page hardcoded expiry "15 phút" → "24 giờ" (F2)
+
+**Files changed:**
+- `apps/web/app/(auth)/check-email/page.tsx` (line 59): Changed the displayed link-expiry text from `"15 phút"` to `"24 giờ"` to match the actual `VERIFICATION_TOKEN_TTL_HOURS = 24` constant in `apps/api/src/auth/auth.service.ts`.
+  - The mismatch caused users to believe their verification link had expired after 15 minutes and to spam the "Gửi lại email" button, when in reality the link was still valid for up to 24 hours.
+
+---
+
+## 2026-05-27 (144) — Phase 4 QA fix: Fix getRoleFromAccessToken missing base64 padding (F1 — critical)
+
+**Files changed:**
+- `apps/web/middleware.ts`: Fixed `getRoleFromAccessToken` to add proper base64 padding before calling `atob()`.
+  - JWT payloads are base64url-encoded without `=` padding characters.
+  - Edge Runtime's `atob()` throws `DOMException` when the input length is not a multiple of 4.
+  - The silent `catch → return null` caused the admin guard `if (role !== null && role !== 'ADMIN')` to never fire — any authenticated non-admin user with a valid `access_token` would pass straight through to the admin shell.
+  - Fix: `base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')` before calling `atob(paddedBase64)`.
+
+---
+
 ## 2026-05-27 (143) — Phase 4: Protect /admin routes — redirect to /dashboard if not Admin
 
 **Files changed:**

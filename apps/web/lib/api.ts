@@ -73,6 +73,13 @@ async function request<T>(path: string, options: RequestOptions = {}, retry = tr
     const ok = await callRefresh();
     if (ok) return request<T>(path, options, false);
     if (typeof window !== 'undefined') {
+      // Persist the current URL so the login page can redirect back after
+      // re-auth instead of always landing on /dashboard.
+      // Store only pathname + search (not full href) to prevent open-redirect.
+      const returnUrl = window.location.pathname + window.location.search;
+      if (returnUrl !== '/login') {
+        sessionStorage.setItem('returnUrl', returnUrl);
+      }
       window.location.href = '/login';
       // Return a promise that never settles — the page is navigating away,
       // so we must not let TanStack Query transition to an error state first.

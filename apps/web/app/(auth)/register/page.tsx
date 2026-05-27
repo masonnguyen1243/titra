@@ -4,6 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+
+const GOOGLE_AUTH_URL =
+  (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000') + '/api/v1/auth/google';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,13 +23,20 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  function handleGoogleLogin() {
+    window.location.href = GOOGLE_AUTH_URL;
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     register(
       { name, email, password },
       {
         onSuccess: () => {
-          router.push('/check-email?email=' + encodeURIComponent(email));
+          // Store email in sessionStorage instead of the URL to avoid
+          // exposing it in browser history, server access logs, and Referer headers.
+          sessionStorage.setItem('pendingVerificationEmail', email);
+          router.push('/check-email');
         },
         onError: (err) => {
           const message =
@@ -108,7 +118,13 @@ export default function RegisterPage() {
             </span>
           </div>
 
-          <Button variant="outline" className="w-full" type="button" disabled={isPending}>
+          <Button
+            variant="outline"
+            className="w-full"
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={isPending}
+          >
             <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

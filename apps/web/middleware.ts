@@ -13,6 +13,17 @@ const PROTECTED_PREFIXES = ['/dashboard', '/events', '/admin'];
 const ADMIN_PREFIXES = ['/admin'];
 
 /**
+ * Auth-only paths — pages that should NOT be reachable once a user
+ * already has a session (login, register, forgot-password).
+ * An authenticated visitor is redirected straight to /dashboard.
+ *
+ * /check-email is intentionally excluded: the user may have just
+ * registered and still need to verify, so we never want to bounce
+ * them away from that confirmation screen.
+ */
+const AUTH_ONLY_PREFIXES = ['/login', '/register', '/forgot-password'];
+
+/**
  * Returns true if the pathname matches a protected route.
  */
 function isProtected(pathname: string): boolean {
@@ -26,6 +37,16 @@ function isProtected(pathname: string): boolean {
  */
 function isAdminRoute(pathname: string): boolean {
   return ADMIN_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + '/'),
+  );
+}
+
+/**
+ * Returns true if the pathname is an auth-only route (login, register,
+ * forgot-password). Authenticated users should be bounced to /dashboard.
+ */
+function isAuthOnlyRoute(pathname: string): boolean {
+  return AUTH_ONLY_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(prefix + '/'),
   );
 }
@@ -63,9 +84,17 @@ function getRoleFromAccessToken(request: NextRequest): string | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
-    // base64url → standard base64 → decode
+    // base64url → standard base64 → add padding → decode
+    // JWT payload is base64url (no `=` padding). Edge Runtime's atob()
+    // requires standard base64 with proper padding, otherwise it throws
+    // a DOMException which the catch block would silently swallow —
+    // returning null and bypassing the admin guard for all users.
     const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const json = atob(base64);
+    const paddedBase64 = base64.padEnd(
+      Math.ceil(base64.length / 4) * 4,
+      '=',
+    );
+    const json = atob(paddedBase64);
     const payload = JSON.parse(json) as { role?: string };
     return payload.role ?? null;
   } catch {
@@ -76,18 +105,25 @@ function getRoleFromAccessToken(request: NextRequest): string | null {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Skip middleware for non-protected routes
+  // 1. Auth-only routes (login, register, forgot-password):
+  //    redirect already-authenticated users to /dashboard so they don't
+  //    see auth forms they don't need.
+  if (isAuthOnlyRoute(pathname) && hasSession(request)) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // 2. Skip middleware for non-protected routes
   if (!isProtected(pathname)) {
     return NextResponse.next();
   }
 
-  // 2. No session at all → redirect to /login
+  // 3. No session at all → redirect to /login
   if (!hasSession(request)) {
     const loginUrl = new URL('/login', request.url);
     return NextResponse.redirect(loginUrl);
   }
 
-  // 3. Admin-only routes: check role when access_token is present.
+  // 4. Admin-only routes: check role when access_token is present.
   //    If only refresh_token is present (access token just expired), let
   //    the request through — the page's API calls will return 403 and the
   //    admin page renders no sensitive data without a valid token anyway.
