@@ -1,8 +1,33 @@
+'use client';
+
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useResendVerification } from '@/lib/hooks/use-auth';
+import { ApiError } from '@/lib/api';
 
 export default function CheckEmailPage() {
+  const searchParams = useSearchParams();
+  const email = searchParams.get('email') ?? '';
+
+  const { mutate: resend, isPending } = useResendVerification();
+
+  function handleResend() {
+    if (!email) return;
+    resend(email, {
+      onSuccess: () => {
+        toast.success('Đã gửi lại email xác thực. Vui lòng kiểm tra hộp thư đến.');
+      },
+      onError: (err) => {
+        const message =
+          err instanceof ApiError ? err.message : 'Đã xảy ra lỗi, vui lòng thử lại';
+        toast.error(message);
+      },
+    });
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -17,7 +42,15 @@ export default function CheckEmailPage() {
           </div>
           <CardTitle>Kiểm tra email của bạn</CardTitle>
           <CardDescription>
-            Chúng tôi đã gửi một liên kết đến email của bạn. Vui lòng kiểm tra hộp thư đến (và thư mục spam nếu không thấy).
+            {email ? (
+              <>
+                Chúng tôi đã gửi một liên kết xác thực đến{' '}
+                <span className="font-medium text-foreground">{email}</span>. Vui lòng kiểm tra
+                hộp thư đến (và thư mục spam nếu không thấy).
+              </>
+            ) : (
+              'Chúng tôi đã gửi một liên kết xác thực đến email của bạn. Vui lòng kiểm tra hộp thư đến (và thư mục spam nếu không thấy).'
+            )}
           </CardDescription>
         </CardHeader>
 
@@ -25,9 +58,20 @@ export default function CheckEmailPage() {
           <p className="text-center text-sm text-muted-foreground">
             Liên kết sẽ hết hạn sau <span className="font-medium text-foreground">15 phút</span>.
           </p>
-          <Button className="w-full" variant="outline" asChild>
-            <Link href="/forgot-password">Gửi lại email</Link>
-          </Button>
+          {email ? (
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={handleResend}
+              disabled={isPending}
+            >
+              {isPending ? 'Đang gửi…' : 'Gửi lại email xác thực'}
+            </Button>
+          ) : (
+            <Button className="w-full" variant="outline" asChild>
+              <Link href="/register">Quay lại đăng ký</Link>
+            </Button>
+          )}
         </CardContent>
 
         <CardFooter className="justify-center">

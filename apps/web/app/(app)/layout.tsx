@@ -1,9 +1,9 @@
 import { Separator } from '@/components/ui/separator';
 import { cookies } from 'next/headers';
 
-function getRoleFromAccessToken(): string | null {
+async function getRoleFromAccessToken(): Promise<string | null> {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('access_token')?.value;
     if (!token) return null;
     const payloadBase64 = token.split('.')[1];
@@ -17,8 +17,8 @@ function getRoleFromAccessToken(): string | null {
   }
 }
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const role = getRoleFromAccessToken();
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const role = await getRoleFromAccessToken();
   const isAdmin = role === 'ADMIN';
 
   return (

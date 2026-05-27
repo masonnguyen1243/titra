@@ -500,11 +500,23 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Auth**
 
-- [ ] Wire login form → `POST /auth/login` → redirect to dashboard on success
-- [ ] Wire register form → `POST /auth/register` → show "check your email" screen
-- [ ] Wire forgot password form → `POST /auth/forgot-password`
-- [ ] Protect `(app)` routes: redirect to `/login` if no valid session
-- [ ] Protect `/admin` routes: redirect to `/dashboard` if not Admin
+- [x] Wire login form → `POST /auth/login` → redirect to dashboard on success
+- [x] Wire register form → `POST /auth/register` → show "check your email" screen
+- [x] Wire forgot password form → `POST /auth/forgot-password`
+- [x] Protect `(app)` routes: redirect to `/login` if no valid session
+- [x] Protect `/admin` routes: redirect to `/dashboard` if not Admin
+
+**Auth — QA fixes**
+
+- [ ] Fix middleware `getRoleFromAccessToken`: thiếu base64 padding trước khi gọi `atob()` — JWT payload là base64url không có `=`; Edge Runtime `atob()` ném `DOMException`; `try/catch` silently trả `null`; guard `if (role !== null && role !== 'ADMIN')` không bao giờ fire → non-admin user có `access_token` hợp lệ vẫn qua được admin route và thấy admin shell. Cần thêm padding: `base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')` trước khi decode (F1 — critical)
+- [ ] Fix `check-email/page.tsx`: hiển thị cứng "15 phút" nhưng `VERIFICATION_TOKEN_TTL_HOURS = 24` trong `auth.service.ts` — người dùng tưởng link hết hạn sau 15 phút, bỏ email hợp lệ và resend không cần thiết. Sửa thành "24 giờ" (F2)
+- [ ] Fix `AppLayout`: thay `<a href="...">` bằng Next.js `<Link>` cho cả hai nav link `/dashboard` và `/admin` — `<a>` gây full page reload mỗi lần navigate, huỷ toàn bộ TanStack Query cache và React component state (F3)
+- [ ] Wire Google OAuth button ở trang login và register — nút "Tiếp tục với Google" hiện `type="button"` không có `onClick` handler, click không có tác dụng; spec §5.1 yêu cầu "User can log in with Google OAuth" — acceptance criterion hoàn toàn chưa được đáp ứng (F4)
+- [ ] Thêm `<Suspense>` wrapper cho `useSearchParams()` trong `check-email/page.tsx` — Next.js App Router yêu cầu điều này cho Client Component; thiếu wrapper gây build warning và flash UI branch "Quay lại đăng ký" sai trước khi hydrate với email từ URL (M1)
+- [ ] Thêm logout button/user menu vào `AppLayout` — `useLogout` hook đã tồn tại và clear query cache đúng, nhưng không có UI nào trong app shell để gọi nó; người dùng không có cách đăng xuất (M2)
+- [ ] Redirect user đã có session ra khỏi auth pages `/login`, `/register` — middleware chỉ guard `(app)` routes, không block người dùng đã đăng nhập quay lại auth forms; nên kiểm tra cookie và redirect về `/dashboard` nếu đã có session (M3)
+- [ ] Fix `api.ts`: lưu `window.location.pathname` vào `sessionStorage` làm `returnUrl` trước khi redirect sang `/login` khi nhận 401 → sau khi re-auth, dùng `returnUrl` để quay lại đúng trang thay vì luôn về `/dashboard` (S1)
+- [ ] Ẩn địa chỉ email khỏi URL query param ở check-email page — `/check-email?email=user@example.com` lộ email vào browser history, server access logs và `Referer` header; nên truyền qua `router.push` với `state` object hoặc lưu vào `sessionStorage` trước khi navigate (S2)
 
 **Dashboard & events**
 
@@ -561,7 +573,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 **Form validation (React Hook Form + Zod)**
 
 - [ ] Login: required fields, valid email format
-- [ ] Register: required fields, valid email, password min 8 chars, passwords match
+- [ ] Register: required fields, valid email, password min 8 chars, passwords match — **lưu ý:** form register hiện thiếu cả trường "confirm password" lẫn kiểm tra độ dài tối thiểu ở client; người dùng nhập sai password không phát hiện ra cho đến khi đăng nhập thất bại
 - [ ] Add `@MaxLength` to backend DTOs: `name` ≤ 100 chars, `password` ≤ 128 chars — no upper bounds currently; omitting lets attackers force bcrypt to process oversized input (M8)
 - [ ] Create Event: name required, type required
 - [ ] Add Expense: amount > 0 required, description required, custom split must sum to total

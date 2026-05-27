@@ -2,15 +2,41 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { useLogin } from '@/lib/hooks/use-auth';
+import { ApiError } from '@/lib/api';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { mutate: login, isPending } = useLogin();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    login(
+      { email, password },
+      {
+        onSuccess: () => {
+          router.push('/dashboard');
+        },
+        onError: (err) => {
+          const message =
+            err instanceof ApiError
+              ? err.message
+              : 'Đã xảy ra lỗi, vui lòng thử lại';
+          toast.error(message);
+        },
+      },
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -26,7 +52,7 @@ export default function LoginPage() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -36,6 +62,8 @@ export default function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={isPending}
+                required
               />
             </div>
 
@@ -56,11 +84,13 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isPending}
+                required
               />
             </div>
 
-            <Button className="w-full" type="submit">
-              Đăng nhập
+            <Button className="w-full" type="submit" disabled={isPending}>
+              {isPending ? 'Đang đăng nhập…' : 'Đăng nhập'}
             </Button>
           </form>
 
@@ -71,7 +101,7 @@ export default function LoginPage() {
             </span>
           </div>
 
-          <Button variant="outline" className="w-full" type="button">
+          <Button variant="outline" className="w-full" type="button" disabled={isPending}>
             <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

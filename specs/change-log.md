@@ -1,5 +1,80 @@
 # Change Log — Titra
 
+## 2026-05-27 (143) — Phase 4: Protect /admin routes — redirect to /dashboard if not Admin
+
+**Files changed:**
+- `apps/web/middleware.ts`: Extended the existing auth middleware with admin role enforcement.
+  - Added `ADMIN_PREFIXES = ['/admin']` constant.
+  - Added `isAdminRoute(pathname)` helper.
+  - Added `getRoleFromAccessToken(request)`: decodes the `role` claim from the `access_token` JWT using `atob` (Web API, required for Edge Runtime — no `Buffer`). Returns `null` if the cookie is absent, malformed, or has no role.
+  - New guard (step 3 in middleware): when `isAdminRoute` is true and `access_token` is present with a non-ADMIN role → `redirect('/dashboard')`.
+  - When only `refresh_token` is present (`role === null`): let through — the access token just expired, a transparent refresh is pending, and the API server enforces 403 on all admin calls anyway.
+  - JWT signature is intentionally NOT verified (remains the API server's responsibility).
+
+---
+
+## 2026-05-27 (142) — Phase 4: Protect (app) routes — redirect to /login if no valid session
+
+**Files changed:**
+- `apps/web/middleware.ts` *(new file)*: Next.js Edge Middleware that guards the `(app)` route group.
+  - Protected prefixes: `/dashboard`, `/events`, `/admin` (all sub-paths included).
+  - Session check: at least one of `access_token` or `refresh_token` cookies must be present.
+    - `access_token` present → normal authenticated session.
+    - Only `refresh_token` present → access token expired; page is allowed through so `api.ts` can perform a transparent 401 → refresh cycle on the first API call.
+    - Neither present → unauthenticated; redirect to `/login`.
+  - JWT signature is NOT verified in middleware — that remains the API server's responsibility. The middleware only prevents unauthenticated visitors from rendering the app shell.
+  - `config.matcher` excludes Next.js internals (`_next/static`, `_next/image`) and static assets to avoid middleware overhead on non-page requests.
+
+---
+
+## 2026-05-27 (141) — Phase 4: Wire forgot password form → POST /auth/forgot-password
+
+**Files changed:**
+- `apps/web/app/(auth)/forgot-password/page.tsx`: Wired the form to `useForgotPassword` mutation hook.
+  - `handleSubmit` calls `forgotPassword(email)`.
+  - On success: sets `submitted = true`, transitioning the card to a confirmation state.
+  - On error: shows `toast.error(message)` with the API error message; form stays visible so user can correct.
+  - Button shows **"Đang gửi…"** and is disabled while the mutation is in flight (`isPending`).
+  - Email input is also `disabled` while pending; `required` attribute added.
+  - **Post-submit confirmation state**: the form is replaced by an email-sent card showing the submitted address, a 1-hour expiry note, and a "Gửi lại email" button wired to `useForgotPassword` that shows a success toast on resend.
+
+---
+
+## 2026-05-27 (140) — Phase 4: Wire register form → POST /auth/register → check-email screen
+
+**Files changed:**
+- `apps/web/app/(auth)/register/page.tsx`: Connected the register form to the `useRegister` mutation hook.
+  - `onSubmit` now calls `register({ name, email, password })`.
+  - On success: redirects to `/check-email?email=<encoded_email>` so the email is available for resend verification.
+  - On error: shows `toast.error(message)` with the API error message.
+  - Submit button is disabled and labelled "Đang tạo tài khoản…" while pending (`isPending`).
+  - All three inputs are also `disabled` while pending to prevent double-submit.
+  - `required` attribute added to all fields for browser-level validation.
+  - Google OAuth button is disabled while pending.
+- `apps/web/app/(auth)/check-email/page.tsx`: Converted to a client component to support the resend flow.
+  - Reads `email` from the URL search param (`?email=…`) set by the register redirect.
+  - If `email` is present: shows the address in the description and renders a "Gửi lại email xác thực" button wired to `useResendVerification`.
+  - If `email` is absent (direct navigation): shows a generic description and a "Quay lại đăng ký" link.
+  - Resend button shows "Đang gửi…" and is disabled while the mutation is in flight.
+  - Success toast: "Đã gửi lại email xác thực. Vui lòng kiểm tra hộp thư đến."
+  - Error toast: API error message or generic fallback.
+
+---
+
+## 2026-05-27 (139) — Phase 4: Wire login form → POST /auth/login → redirect to dashboard
+
+**Files changed:**
+- `apps/web/app/(auth)/login/page.tsx`: Connected the login form to the `useLogin` mutation hook.
+  - `onSubmit` now calls `login({ email, password })`.
+  - On success: `router.push('/dashboard')` (uses Next.js `useRouter`).
+  - On error: shows a `toast.error(message)` from sonner with the API's error message.
+  - Submit button is disabled and labelled "Đang đăng nhập…" while the request is in flight (`isPending`).
+  - All inputs are also `disabled` while pending to prevent double-submit.
+  - `required` attribute added to both fields for browser-level validation before the mutation fires.
+- `apps/web/app/(app)/layout.tsx`: Fixed pre-existing Next.js 15 type error — `cookies()` now returns a `Promise`; converted `getRoleFromAccessToken` to `async` and `await`ed the cookies call; converted `AppLayout` to `async` accordingly.
+
+---
+
 ## 2026-05-26 (138) — Phase 4: Warn when NEXT_PUBLIC_API_URL is unset in production
 
 **Files changed:**
