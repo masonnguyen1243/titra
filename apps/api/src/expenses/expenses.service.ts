@@ -236,6 +236,10 @@ export class ExpensesService {
       throw new NotFoundException('Sự kiện không tồn tại');
     }
 
+    if (event.status === EventStatus.SETTLED || event.status === EventStatus.ARCHIVED) {
+      throw new BadRequestException('Không thể thêm chi phí vào sự kiện đã kết thúc');
+    }
+
     const callerMember = event.members.find((m) => m.userId === callerId);
     if (!callerMember) {
       throw new ForbiddenException('Bạn không phải thành viên của sự kiện này');

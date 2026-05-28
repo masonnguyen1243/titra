@@ -1,5 +1,26 @@
 # Change Log — Titra
 
+## 2026-05-28 (171) — Backend QA fix: Guard SETTLED/ARCHIVED in createExpense (F4 — critical)
+
+**Task:** Fix `expenses.service.ts` `createExpense()`: missing guard for SETTLED/ARCHIVED event status.
+
+**Root cause:** `createExpense` selects `status` from the DB but never checks its value. `updateExpense` (line 115) and `deleteExpense` (line 68) already had the correct guard; `createExpense` was the only gap.
+
+**Files changed:**
+
+- `apps/api/src/expenses/expenses.service.ts`:
+  - Added `EventStatus` guard immediately after the `!event` null check in `createExpense`:
+    ```ts
+    if (event.status === EventStatus.SETTLED || event.status === EventStatus.ARCHIVED) {
+      throw new BadRequestException('Không thể thêm chi phí vào sự kiện đã kết thúc');
+    }
+    ```
+  - Pattern mirrors the identical guard already present in `updateExpense` and `deleteExpense`.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
 ## 2026-05-28 (170) — Expenses QA fix (Round 2): Allow clearing receipt image in edit mode (M1)
 
 **Task:** Fix `add-expense-dialog.tsx`: cannot remove receipt photo when editing an expense.

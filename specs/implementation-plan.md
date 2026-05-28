@@ -568,7 +568,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Backend — QA fixes**
 
-- [ ] Fix `expenses.service.ts` `createExpense()`: thiếu guard `SETTLED`/`ARCHIVED` — hàm select `status` từ DB nhưng không bao giờ kiểm tra giá trị đó; member có thể thêm expense mới vào event đã chốt; `updateExpense` và `deleteExpense` đã có guard đúng ở line 68 và 115 nhưng `createExpense` thì không. Cần thêm guard tương tự ngay sau khi kiểm tra `!event` (F4 — 🔴 critical)
+- [x] Fix `expenses.service.ts` `createExpense()`: thiếu guard `SETTLED`/`ARCHIVED` — hàm select `status` từ DB nhưng không bao giờ kiểm tra giá trị đó; member có thể thêm expense mới vào event đã chốt; `updateExpense` và `deleteExpense` đã có guard đúng ở line 68 và 115 nhưng `createExpense` thì không. Cần thêm guard tương tự ngay sau khi kiểm tra `!event` (F4 — 🔴 critical)
 
 **Settlements**
 
