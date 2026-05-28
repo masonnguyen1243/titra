@@ -66,6 +66,7 @@ export default function SettlementsPage({ params }: { params: Promise<{ id: stri
         toMemberId: s.toMemberId,
         amount: s.amount,
         method: s.method as PaymentMethod,
+        proofUrl: s.proofUrl ?? undefined,
         _fromMember: fromMember
           ? { id: fromMember.id, nickname: fromMember.nickname, userId: fromMember.userId }
           : undefined,

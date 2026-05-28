@@ -1,5 +1,63 @@
 # Change Log — Titra
 
+## 2026-05-28 (177) — Phase 4 QA: Cloudinary proof upload in Record Settlement dialog (M4)
+
+**Tasks completed:**
+- QA M4: `record-settlement-dialog.tsx` — upload proof screenshot to Cloudinary before submit
+
+**Files changed:**
+
+- `apps/web/components/features/record-settlement-dialog.tsx`:
+  - Added `import { useCloudinaryUpload }` from `@/lib/hooks/use-upload`.
+  - Added `proofUrl?: string | null` to `NewSettlement` interface — carried through to `onAdd` callback.
+  - Added `uploadedProofUrl: string | null` and `isUploading: boolean` state; both reset in `resetForm`.
+  - `handleProofChange` is now `async`: after MIME/size validation, calls `cloudinaryUpload.mutateAsync(file)` immediately; sets `isUploading` during the upload; on success sets `uploadedProofUrl`; on non-AbortError failure, shows "Tải ảnh thất bại" error and clears proof state.
+  - `removeProof`: also clears `uploadedProofUrl`.
+  - `handleSubmit`: passes `proofUrl: uploadedProofUrl ?? undefined` to `onAdd`.
+  - UI: while `isUploading`, the proof row shows a `Loader2` spinner and "Đang tải ảnh lên…"; after success, shows "Ảnh đã được tải lên ✓" in green; submit and cancel buttons disabled while uploading; submit button label changes to "Đang tải ảnh…".
+
+- `apps/web/app/(app)/events/[id]/settlements/page.tsx`:
+  - `handleAdd`: forwards `proofUrl: s.proofUrl ?? undefined` to `createSettlement.mutateAsync`.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-28 (176) — Phase 4 QA: MIME type validation for proof upload in settlement dialog (M4)
+
+**Tasks completed:**
+- QA M4: `record-settlement-dialog.tsx` — validate `file.type` before accepting proof image
+
+**Files changed:**
+
+- `apps/web/components/features/record-settlement-dialog.tsx`:
+  - Added `ALLOWED_PROOF_TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/heif']` constant (mirrors `ALLOWED_RECEIPT_TYPES` in `add-expense-dialog.tsx`).
+  - `handleProofChange`: added MIME type check **before** the size check — rejects file with "Chỉ chấp nhận ảnh JPG, PNG hoặc HEIC." if `file.type` is not in the allowed list; clears the input value so the same file can be re-selected after the error.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-28 (175) — Phase 4 QA: MoMo/VNPay deep-link in Record Settlement dialog (F3)
+
+**Tasks completed:**
+- QA F3: `record-settlement-dialog.tsx` — tappable MoMo/VNPay deep-links pre-filled with amount
+
+**Files changed:**
+
+- `apps/web/components/features/record-settlement-dialog.tsx`:
+  - Added `buildDeepLink(method, amount, phone, account)` helper — mirrors the backend `payment-deeplinks.ts` logic; generates `momo://transfer?...` or `vnpay://transfer?...` deep-link URLs with `encodeURIComponent` for phone/account params; falls back gracefully when phone/account is empty.
+  - Added `momoPhone` and `vnpayAccount` state (reset in `resetForm`).
+  - After the payment method selector, renders a conditional block when `method === 'MOMO'` or `'VNPAY'`:
+    - **MoMo**: optional "Số điện thoại MoMo" input (digits only via `replace(/\D/g, '')`).
+    - **VNPay**: optional "Số tài khoản VNPay" input.
+    - When `amount > 0`: a tappable `<a>` link (`target="_blank"`) styled with `ExternalLink` icon showing "Mở ứng dụng MoMo — X ₫" / "Mở ứng dụng VNPay — X ₫"; clicking opens the deep-link (app if installed, falls back to the system browser).
+  - Added `ExternalLink` to lucide-react imports.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
 ## 2026-05-28 (174) — Phase 4: Confirm and reject buttons for settlements (F4 — critical)
 
 **Tasks completed:**
