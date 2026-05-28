@@ -5,7 +5,7 @@ import { api } from '../api';
 import { balanceKeys } from './use-balances';
 
 export type SettlementStatus = 'PENDING' | 'CONFIRMED';
-export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'MOMO' | 'VNPAY';
+export type PaymentMethod = 'CASH' | 'OTHER' | 'MOMO' | 'VNPAY';
 
 export interface SettlementMemberRef {
   id: string;
@@ -32,6 +32,9 @@ interface CreateSettlementPayload {
   amount: number;
   method?: PaymentMethod;
   proofUrl?: string;
+  // optimistic display only — stripped before API call
+  _fromMember?: SettlementMemberRef;
+  _toMember?: SettlementMemberRef;
 }
 
 export const settlementKeys = {
@@ -49,9 +52,39 @@ export function useSettlements(eventId: string) {
 export function useCreateSettlement(eventId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: CreateSettlementPayload) =>
+    mutationFn: ({ _fromMember: _f, _toMember: _t, ...payload }: CreateSettlementPayload) =>
       api.post<Settlement>(`/events/${eventId}/settlements`, payload),
-    onSuccess: () => {
+    onMutate: async (payload) => {
+      await qc.cancelQueries({ queryKey: settlementKeys.list(eventId) });
+      const prev = qc.getQueryData<Settlement[]>(settlementKeys.list(eventId));
+
+      if (payload._fromMember && payload._toMember) {
+        const optimistic: Settlement = {
+          id: `optimistic-${Date.now()}`,
+          eventId,
+          amount: payload.amount,
+          method: payload.method ?? 'CASH',
+          status: 'PENDING',
+          proofUrl: payload.proofUrl ?? null,
+          fromMember: payload._fromMember,
+          toMember: payload._toMember,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        qc.setQueryData<Settlement[]>(settlementKeys.list(eventId), (old) => [
+          ...(old ?? []),
+          optimistic,
+        ]);
+      }
+
+      return { prev };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.prev !== undefined) {
+        qc.setQueryData<Settlement[]>(settlementKeys.list(eventId), context.prev);
+      }
+    },
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: settlementKeys.list(eventId) });
     },
   });

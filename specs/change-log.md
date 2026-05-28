@@ -1,5 +1,80 @@
 # Change Log — Titra
 
+## 2026-05-28 (174) — Phase 4: Confirm and reject buttons for settlements (F4 — critical)
+
+**Tasks completed:**
+- Confirm and reject buttons wired to API; balance view updates after confirm
+- QA F4: UI confirm and reject for PENDING settlements
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/settlements/page.tsx`:
+  - Added imports: `useConfirmSettlement`, `useDeleteSettlement` (from `use-settlements`), `useMe` (from `use-user`), `Check`, `Loader2`, `X` (from lucide-react).
+  - Derives `myMember` (current user's `EventMember`) and `isOrganizer` from `eventMembers`.
+  - Tracks `confirmingId` / `deletingId` via `mutation.variables` for per-row spinner without extra state.
+  - For each PENDING settlement: if `isRecipient` (toMember.userId === me.id) OR `isOrganizer`, renders two action buttons below the info row:
+    - **"Xác nhận"** (confirm) — calls `useConfirmSettlement`; on success invalidates both the settlements list AND `balanceKeys.detail(id)` (already wired in the hook) so the Balances tab updates.
+    - **"Từ chối"** (reject/delete) — calls `useDeleteSettlement`; removes the PENDING row.
+  - Both buttons are disabled while any mutation is in flight (`isBusy`); show `Loader2` spinner on the active button.
+  - `handleConfirm` / `handleReject` catch errors and show `toast.error` with the API message when available.
+  - Row layout changed from `flex items-center justify-between` to `space-y-2.5` to accommodate the action row below the info/amount line.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-28 (173) — Phase 4: Optimistic update for Record Settlement form
+
+**Tasks completed:**
+- Record Settlement form submits and shows PENDING entry immediately (optimistic UI)
+
+**Files changed:**
+
+- `apps/web/lib/hooks/use-settlements.ts`:
+  - Added `_fromMember` and `_toMember` optional fields to `CreateSettlementPayload` (stripped before API call via destructuring in `mutationFn`).
+  - `useCreateSettlement`: replaced `onSuccess`-only invalidation with full optimistic update pattern (`onMutate` / `onError` / `onSettled`):
+    - `onMutate`: cancels in-flight queries, snapshots previous data, injects a synthetic `Settlement` with `status: 'PENDING'` and a temporary `id`.
+    - `onError`: restores the snapshot on failure so the optimistic item disappears.
+    - `onSettled`: invalidates the query regardless of outcome so the server-authoritative data replaces the optimistic entry.
+
+- `apps/web/app/(app)/events/[id]/settlements/page.tsx`:
+  - `handleAdd` now looks up `fromMember` and `toMember` from `eventMembers` and passes `_fromMember`/`_toMember` to `mutateAsync` for optimistic display.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-28 (172) — Phase 4: Wire settlements list to live API; fix PaymentMethod type (M3)
+
+**Tasks completed:**
+- Settlement list fetches real data with status badges
+- Fix `use-settlements.ts`: `'BANK_TRANSFER'` → `'OTHER'` in `PaymentMethod` type (required for compilation)
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/settlements/page.tsx` — full rewrite:
+  - Removed all static mock data (`SEED_SETTLEMENTS`, `MOCK_MEMBERS`, `DEFAULT_MEMBERS`, `nextId`, local `settlements` state).
+  - Imports and calls `useSettlements(id)` for the list, `useCreateSettlement(id)` for form submission, `useEventDetail(id)` for the members list passed to the dialog.
+  - Shows `SettlementListSkeleton` while loading (already existed in skeletons.tsx).
+  - Shows a Vietnamese error message with "Thử lại" retry button (calls `qc.invalidateQueries`) when `isError`.
+  - Renders real settlements: `fromMember.nickname → toMember.nickname`, `StatusBadge`, method label, proof indicator, date from `createdAt`.
+  - `handleAdd` calls `createSettlement.mutateAsync()` with `fromMemberId`/`toMemberId`; shows `toast.success` / `toast.error`; re-throws so the dialog stays open on failure.
+  - Passes `isSubmitting={createSettlement.isPending}` to the dialog.
+
+- `apps/web/components/features/record-settlement-dialog.tsx`:
+  - `NewSettlement` simplified to `{ fromMemberId, toMemberId, amount, method }` (removed `from`, `to`, `date`, `hasProof` which were display-only).
+  - `onAdd` callback type updated to `void | Promise<void>`.
+  - Added `isSubmitting?: boolean` prop; submit button shows `Loader2` spinner and is disabled while submitting.
+  - `handleSubmit` is now `async`, awaits `onAdd`, keeps dialog open on error.
+  - Imports `Loader2` from lucide-react.
+
+- `apps/web/lib/hooks/use-settlements.ts`:
+  - `PaymentMethod` type: replaced `'BANK_TRANSFER'` with `'OTHER'` to match Prisma schema `enum SettlementMethod`.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
 ## 2026-05-28 (171) — Backend QA fix: Guard SETTLED/ARCHIVED in createExpense (F4 — critical)
 
 **Task:** Fix `expenses.service.ts` `createExpense()`: missing guard for SETTLED/ARCHIVED event status.

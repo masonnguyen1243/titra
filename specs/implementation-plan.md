@@ -572,17 +572,17 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Settlements**
 
-- [ ] Settlement list fetches real data with status badges
-- [ ] Record Settlement form submits and shows PENDING entry immediately
-- [ ] Confirm and reject buttons wired to API; balance view updates after confirm
+- [x] Settlement list fetches real data with status badges
+- [x] Record Settlement form submits and shows PENDING entry immediately
+- [x] Confirm and reject buttons wired to API; balance view updates after confirm
 
 **Settlements — QA fixes**
 
-- [ ] Fix `use-settlements.ts`: đổi `'BANK_TRANSFER'` → `'OTHER'` trong `PaymentMethod` type — Prisma schema định nghĩa `enum SettlementMethod { MOMO VNPAY CASH OTHER }`, không có `BANK_TRANSFER`; giá trị này sẽ gây Prisma validation error khi được gửi lên backend (M3 — 🟠 medium)
+- [x] Fix `use-settlements.ts`: đổi `'BANK_TRANSFER'` → `'OTHER'` trong `PaymentMethod` type — Prisma schema định nghĩa `enum SettlementMethod { MOMO VNPAY CASH OTHER }`, không có `BANK_TRANSFER`; giá trị này sẽ gây Prisma validation error khi được gửi lên backend (M3 — 🟠 medium)
 - [ ] Fix `record-settlement-dialog.tsx`: thêm MoMo/VNPay deep-link khi chọn phương thức tương ứng — spec §5.6 yêu cầu "selecting MoMo or VNPay generates a tappable deep-link pre-filled with the correct amount"; backend util `payment-deeplinks.ts` đã có nhưng không có path nào gọi đến nó từ frontend; cần render link/QR tappable ngay dưới payment method selector (F3 — 🟠 high)
 - [ ] Fix `record-settlement-dialog.tsx`: thêm validation MIME type cho file proof — `handleProofChange` chỉ kiểm tra `file.size`, không kiểm tra `file.type`; khác với expense dialog đã fix ở entry 163; file được rename tuỳ ý sẽ bypass `accept` attribute và được gửi mà không qua guard (M4 — 🟠 medium)
 - [ ] Fix `record-settlement-dialog.tsx`: upload proof screenshot lên Cloudinary trước khi submit — dialog hiện chỉ track `hasProof: boolean` từ local state; không có `useCloudinaryUpload` call; khi settlements page được wire vào API, `proofUrl` sẽ luôn là `null/undefined`; cần dùng cùng pattern với `add-expense-dialog.tsx` (M4 — 🟠 medium)
-- [ ] Thêm UI confirm và reject cho PENDING settlement — settlements page hiển thị danh sách nhưng không có nút "Xác nhận" (cho người nhận) hay "Từ chối" (cho organizer/người nhận); spec §5.5 yêu cầu recipient hoặc organizer có thể confirm, và organizer hoặc recipient có thể reject; `useConfirmSettlement` và `useDeleteSettlement` đã có trong hook nhưng chưa được gọi (F4 — 🔴 critical)
+- [x] Thêm UI confirm và reject cho PENDING settlement — settlements page hiển thị danh sách nhưng không có nút "Xác nhận" (cho người nhận) hay "Từ chối" (cho organizer/người nhận); spec §5.5 yêu cầu recipient hoặc organizer có thể confirm, và organizer hoặc recipient có thể reject; `useConfirmSettlement` và `useDeleteSettlement` đã có trong hook nhưng chưa được gọi (F4 — 🔴 critical)
 
 **Reminders**
 

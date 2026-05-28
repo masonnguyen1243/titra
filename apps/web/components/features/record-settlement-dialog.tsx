@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { Paperclip, X } from 'lucide-react';
+import { Loader2, Paperclip, X } from 'lucide-react';
 
 type PaymentMethod = 'MOMO' | 'VNPAY' | 'CASH' | 'OTHER';
 
@@ -22,19 +22,18 @@ export interface Member {
 }
 
 export interface NewSettlement {
-  from: string;
-  to: string;
+  fromMemberId: string;
+  toMemberId: string;
   amount: number;
   method: PaymentMethod;
-  date: string;
-  hasProof: boolean;
 }
 
 interface RecordSettlementDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   members: Member[];
-  onAdd: (settlement: NewSettlement) => void;
+  onAdd: (settlement: NewSettlement) => void | Promise<void>;
+  isSubmitting?: boolean;
 }
 
 const METHODS: { value: PaymentMethod; label: string }[] = [
@@ -51,6 +50,7 @@ export default function RecordSettlementDialog({
   onOpenChange,
   members,
   onAdd,
+  isSubmitting = false,
 }: RecordSettlementDialogProps) {
   const [fromId, setFromId] = useState<string>(members[0]?.id ?? '');
   const [toId, setToId] = useState<string>(members[1]?.id ?? members[0]?.id ?? '');
@@ -97,19 +97,14 @@ export default function RecordSettlementDialog({
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!isValid) return;
-    const fromName = members.find((m) => m.id === fromId)?.name ?? fromId;
-    const toName = members.find((m) => m.id === toId)?.name ?? toId;
-    onAdd({
-      from: fromName,
-      to: toName,
-      amount,
-      method,
-      date: new Date().toISOString().slice(0, 10),
-      hasProof: proof !== null,
-    });
-    handleOpenChange(false);
+    try {
+      await onAdd({ fromMemberId: fromId, toMemberId: toId, amount, method });
+      handleOpenChange(false);
+    } catch {
+      // caller (page) is responsible for showing the error toast; keep dialog open
+    }
   }
 
   return (
@@ -262,10 +257,11 @@ export default function RecordSettlementDialog({
         </div>
 
         <DialogFooter className="gap-2 pt-2">
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
             Huỷ
           </Button>
-          <Button onClick={handleSubmit} disabled={!isValid}>
+          <Button onClick={() => void handleSubmit()} disabled={!isValid || isSubmitting}>
+            {isSubmitting && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
             Ghi nhận
           </Button>
         </DialogFooter>
