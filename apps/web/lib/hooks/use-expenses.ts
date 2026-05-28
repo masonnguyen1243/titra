@@ -43,7 +43,8 @@ export interface CreateExpensePayload {
   /** EventMember.id of the payer */
   paidById: string;
   category?: string;
-  receiptUrl?: string;
+  /** null in UpdateExpensePayload means "clear the existing receipt" */
+  receiptUrl?: string | null;
   splitType: SplitType;
   /** For EQUAL splits: which member IDs to include (omit = all active members) */
   memberIds?: string[];

@@ -564,7 +564,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Expenses — QA fixes (Round 2)**
 
-- [ ] Fix `add-expense-dialog.tsx`: không thể xoá ảnh hoá đơn khi chỉnh sửa expense — khi user click "Xoá ảnh" trong edit mode, `uploadedReceiptUrl` được set thành `null` nhưng `handleSubmit` gửi `...(uploadedReceiptUrl ? { receiptUrl } : {})` nên `receiptUrl` bị omit hoàn toàn; backend `updateExpense` chỉ patch khi `!== undefined`, khiến ảnh cũ vẫn còn trong DB. Cần truyền `receiptUrl: null` tường minh để clear (M1 — 🟠 medium)
+- [x] Fix `add-expense-dialog.tsx`: không thể xoá ảnh hoá đơn khi chỉnh sửa expense — khi user click "Xoá ảnh" trong edit mode, `uploadedReceiptUrl` được set thành `null` nhưng `handleSubmit` gửi `...(uploadedReceiptUrl ? { receiptUrl } : {})` nên `receiptUrl` bị omit hoàn toàn; backend `updateExpense` chỉ patch khi `!== undefined`, khiến ảnh cũ vẫn còn trong DB. Cần truyền `receiptUrl: null` tường minh để clear (M1 — 🟠 medium)
 
 **Backend — QA fixes**
 

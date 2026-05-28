@@ -1,5 +1,34 @@
 # Change Log — Titra
 
+## 2026-05-28 (170) — Expenses QA fix (Round 2): Allow clearing receipt image in edit mode (M1)
+
+**Task:** Fix `add-expense-dialog.tsx`: cannot remove receipt photo when editing an expense.
+
+**Root cause:** `handleSubmit` used `...(uploadedReceiptUrl ? { receiptUrl } : {})` which omitted `receiptUrl` entirely when null; backend `updateExpense` only patches fields that are `!== undefined`, so the old image was never cleared from the DB.
+
+**Files changed:**
+
+- `apps/web/components/features/add-expense-dialog.tsx`:
+  - Added `receiptExplicitlyRemoved` boolean state (default `false`).
+  - `removeReceipt()` now sets `receiptExplicitlyRemoved = true` when `isEditMode`.
+  - `handleReceiptChange()` resets `receiptExplicitlyRemoved = false` when a new file is selected.
+  - `resetForm()` and the `useEffect` that populates edit-mode data both reset `receiptExplicitlyRemoved = false`.
+  - `handleSubmit` builds `receiptPayload`: sends `receiptUrl: null` explicitly when `isEditMode && receiptExplicitlyRemoved`, so the backend clears the field.
+  - `ExpenseFormValues.receiptUrl` type updated from `string` to `string | null`.
+
+- `apps/web/lib/hooks/use-expenses.ts`:
+  - `CreateExpensePayload.receiptUrl` type updated from `string` to `string | null`, which propagates to `UpdateExpensePayload`.
+
+- `apps/api/src/expenses/dto/update-expense.dto.ts`:
+  - `receiptUrl` type updated from `string` to `string | null`.
+  - Added `@ValidateIf((o) => o.receiptUrl !== null)` so `@IsUrl()` is skipped when value is explicitly null.
+
+- Backend `expenses.service.ts` required no changes: `...(dto.receiptUrl !== undefined && { receiptUrl: dto.receiptUrl })` already passes `null` to Prisma, which clears the nullable `String?` field.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0) in both `apps/web` and `apps/api`.
+
+---
+
 ## 2026-05-27 (169) — Balances QA fix: Add "Thử lại" retry button to error state (M2)
 
 **Files changed:**

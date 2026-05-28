@@ -34,7 +34,8 @@ export interface ExpenseFormValues {
   memberIds?: string[];
   /** For CUSTOM: per-member amounts */
   splits?: { memberId: string; amount: number }[];
-  receiptUrl?: string;
+  /** null means "clear the existing receipt" (edit mode only) */
+  receiptUrl?: string | null;
 }
 
 /** Shape used to pre-fill the dialog when editing an existing expense */
@@ -115,6 +116,8 @@ export default function AddExpenseDialog({
   /** URL after a successful Cloudinary upload */
   const [uploadedReceiptUrl, setUploadedReceiptUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  /** True when user explicitly clicked "Xoá ảnh" for an existing receipt in edit mode */
+  const [receiptExplicitlyRemoved, setReceiptExplicitlyRemoved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const cloudinaryUpload = useCloudinaryUpload();
@@ -141,6 +144,7 @@ export default function AddExpenseDialog({
       setReceipt(null);
       setReceiptError('');
       setSubmitError('');
+      setReceiptExplicitlyRemoved(false);
     } else {
       // add mode — reset to defaults
       setDescription('');
@@ -154,6 +158,7 @@ export default function AddExpenseDialog({
       setReceipt(null);
       setReceiptError('');
       setSubmitError('');
+      setReceiptExplicitlyRemoved(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -193,6 +198,7 @@ export default function AddExpenseDialog({
     setUploadedReceiptUrl(null);
     setIsUploading(false);
     setSubmitError('');
+    setReceiptExplicitlyRemoved(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -226,6 +232,7 @@ export default function AddExpenseDialog({
     setReceiptError('');
     setReceipt(file);
     setUploadedReceiptUrl(null);
+    setReceiptExplicitlyRemoved(false);
 
     // Upload immediately on selection
     setIsUploading(true);
@@ -250,11 +257,18 @@ export default function AddExpenseDialog({
     setReceipt(null);
     setReceiptError('');
     setUploadedReceiptUrl(null);
+    if (isEditMode) setReceiptExplicitlyRemoved(true);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   async function handleSubmit() {
     if (!isValid) return;
+
+    const receiptPayload: { receiptUrl?: string | null } = uploadedReceiptUrl
+      ? { receiptUrl: uploadedReceiptUrl }
+      : isEditMode && receiptExplicitlyRemoved
+        ? { receiptUrl: null }
+        : {};
 
     const values: ExpenseFormValues = {
       description: description.trim(),
@@ -262,7 +276,7 @@ export default function AddExpenseDialog({
       paidById: payerId,
       category,
       splitType: splitMode,
-      ...(uploadedReceiptUrl ? { receiptUrl: uploadedReceiptUrl } : {}),
+      ...receiptPayload,
     };
 
     if (splitMode === 'EQUAL') {

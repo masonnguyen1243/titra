@@ -37,9 +37,10 @@ export class UpdateExpenseDto {
   @IsOptional()
   category?: ExpenseCategory;
 
+  @ValidateIf((o: UpdateExpenseDto) => o.receiptUrl !== null)
   @IsUrl()
   @IsOptional()
-  receiptUrl?: string;
+  receiptUrl?: string | null;
 
   @IsEnum(SplitType)
   @IsOptional()
