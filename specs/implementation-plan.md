@@ -607,10 +607,37 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 - [x] Export button calls `/export/pdf`, shows loading state, then download link
 
+**PDF export — QA fixes**
+
+- [ ] Fix `export.controller.ts` + `layout.tsx`: restrict PDF export to ORGANIZER only — spec §5.9 says "Organizer can trigger PDF export"; `ExportService` only checks `isMember`, any active member can export; export button in layout also renders for all members (F1 — 🔴 high)
+- [ ] Fix `export.service.ts`: gửi download link đến email organizer sau khi tạo PDF — spec §5.9 yêu cầu "Download link is also sent to the organizer's email"; service trả `{ url }` nhưng không có email nào được gửi (F2 — 🟠 medium)
+- [ ] Fix `pdf.generator.ts`: thêm cột split vào bảng chi phí — spec §5.9 liệt kê "split" trong expense list; field `splits` đã được fetch trong `export.service.ts` nhưng không được render trong PDF (F3 — 🟠 medium)
+- [ ] Fix `pdf.generator.ts`: thêm date range của sự kiện vào header — spec §5.9 yêu cầu "event name and date range"; hiện tại chỉ hiển thị `createdAt`; có thể lấy `MIN/MAX(expense.createdAt)` từ danh sách expense đã fetch (F4 — 🟠 medium)
+- [ ] Fix `pdf.generator.ts`: dịch settlement status sang tiếng Việt — `s.status` render chuỗi enum tiếng Anh ("CONFIRMED", "PENDING"); phần còn lại của PDF dùng tiếng Việt (F5 — 🟡 low)
+- [ ] Security: PDF URL Cloudinary là public vĩnh viễn — bất kỳ ai có URL đều xem được toàn bộ dữ liệu tài chính không cần auth; cân nhắc dùng signed URL với TTL ngắn (S2 — 🟠 medium)
+
 **Admin**
 
 - [x] Admin dashboard fetches stats, user list, and event list
 - [x] Deactivate/activate and archive actions wired to admin endpoints
+
+**Admin — QA fixes**
+
+- [ ] Fix `admin/page.tsx`: thêm error states cho ba query stats / users / events — khi API lỗi, sections render im lặng (0 / empty table) thay vì hiển thị thông báo lỗi và nút "Thử lại"; không nhất quán với mọi trang khác trong app (M2 — 🟠 medium)
+- [ ] Fix `admin/page.tsx`: thêm confirm dialog trước khi deactivate user hoặc archive event — hai thao tác fire ngay khi click, không có bước xác nhận; deactivate user có hậu quả tức thì (lock out + revoke tokens) (S3 — 🟡 low)
+
+**Balances — QA fixes (Round 2)**
+
+- [ ] Fix `formatVND` trong `balances/page.tsx`, `admin/page.tsx`, và `pdf.generator.ts`: làm tròn đến 1.000 ₫ cho display — spec §5.4 yêu cầu "Amounts are displayed rounded to nearest 1,000 ₫"; hiện tại `Math.round(amount)` chỉ làm tròn đến 1 đồng; cần `Math.round(amount / 1000) * 1000` (F5 — 🟡 medium)
+
+**Reminders — QA fixes**
+
+- [ ] Fix `balances/page.tsx`: load `lastReminderAt` từ server khi mount — spec §5.7 yêu cầu "Organizer sees a timestamp of the last reminder sent to each member"; hiện tại state reset về `{}` mỗi lần reload nên organizer không thấy timestamp cũ; cần `EventMember.lastReminderAt` được trả về trong event detail hoặc một endpoint riêng (M1 — 🟠 medium)
+
+**Chat — QA fixes (Round 2)**
+
+- [ ] Fix `chat/page.tsx`: xác định `isMe` bằng user ID thay vì display name — `senderName(msg) === me.name` sẽ hiển thị tin nhắn của người khác là "của mình" nếu hai user cùng tên; cần thêm `userId` vào `ApiMessage.member` response và so sánh với `me.id` (S1 — 🟡 medium)
+- [ ] Thêm nút "Tải thêm" để xem tin nhắn cũ hơn — backend hỗ trợ cursor pagination; UI chỉ load 50 tin nhắn mới nhất và không có cách xem lịch sử cũ hơn; `useInfiniteQuery` đã được setup sẵn (M3 — 🟡 low)
 
 ---
 
