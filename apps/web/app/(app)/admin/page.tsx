@@ -1,100 +1,102 @@
 'use client';
 
 import { useState } from 'react';
-import { Users, CalendarDays, Banknote } from 'lucide-react';
+import { toast } from 'sonner';
+import { Users, CalendarDays, Banknote, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/ui/status-badge';
+import {
+  useAdminStats,
+  useAdminUsers,
+  useAdminEvents,
+  useUpdateUserStatus,
+  useArchiveEvent,
+} from '@/lib/hooks/use-admin';
 
-type UserRole = 'ADMIN' | 'USER';
-type UserStatus = 'ACTIVE' | 'INACTIVE';
-type EventStatus = 'ACTIVE' | 'SETTLED' | 'ARCHIVED';
+const PAGE_SIZE = 20;
 
-interface AdminUser {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  status: UserStatus;
-  registeredAt: string;
+function formatVND(amount: number): string {
+  return Math.round(amount).toLocaleString('vi-VN') + ' ₫';
 }
 
-interface AdminEvent {
-  id: string;
-  name: string;
-  organizerName: string;
-  status: EventStatus;
-  memberCount: number;
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
 }
 
-interface StatCard {
-  title: string;
-  value: string;
-  description: string;
-  icon: React.ElementType;
+function StatsSkeleton() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-3">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <Card key={i}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-4 rounded" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-8 w-24 mb-1" />
+            <Skeleton className="h-3 w-40" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
 }
 
-const STATS: StatCard[] = [
-  {
-    title: 'Tổng người dùng',
-    value: '128',
-    description: '+12 trong 30 ngày qua',
-    icon: Users,
-  },
-  {
-    title: 'Tổng sự kiện',
-    value: '47',
-    description: '32 đang hoạt động · 15 đã huề',
-    icon: CalendarDays,
-  },
-  {
-    title: 'Tổng VNĐ theo dõi',
-    value: '12.450.000 ₫',
-    description: 'Trên tất cả sự kiện',
-    icon: Banknote,
-  },
-];
-
-const MOCK_USERS: AdminUser[] = [
-  { id: 'u1', name: 'Nguyễn Minh Anh', email: 'minhanh@example.com', role: 'ADMIN', status: 'ACTIVE', registeredAt: '2026-01-10' },
-  { id: 'u2', name: 'Trần Văn Hùng', email: 'hung@example.com', role: 'USER', status: 'ACTIVE', registeredAt: '2026-02-14' },
-  { id: 'u3', name: 'Phạm Thị Linh', email: 'linh@example.com', role: 'USER', status: 'ACTIVE', registeredAt: '2026-03-01' },
-  { id: 'u4', name: 'Lê Quốc Tuấn', email: 'tuan@example.com', role: 'USER', status: 'INACTIVE', registeredAt: '2026-03-22' },
-  { id: 'u5', name: 'Võ Thị Lan', email: 'lan@example.com', role: 'USER', status: 'ACTIVE', registeredAt: '2026-04-05' },
-  { id: 'u6', name: 'Đặng Văn Dũng', email: 'dung@example.com', role: 'USER', status: 'ACTIVE', registeredAt: '2026-04-18' },
-];
-
-const MOCK_EVENTS: AdminEvent[] = [
-  { id: 'e1', name: 'Đà Lạt Weekend', organizerName: 'Nguyễn Minh Anh', status: 'ACTIVE', memberCount: 6 },
-  { id: 'e2', name: 'Tất niên 2025', organizerName: 'Võ Thị Lan', status: 'SETTLED', memberCount: 12 },
-  { id: 'e3', name: 'Phú Quốc hè 2026', organizerName: 'Trần Văn Hùng', status: 'ACTIVE', memberCount: 8 },
-  { id: 'e4', name: 'Sinh nhật Minh', organizerName: 'Phạm Thị Linh', status: 'ARCHIVED', memberCount: 5 },
-  { id: 'e5', name: 'Team building Q1', organizerName: 'Đặng Văn Dũng', status: 'ACTIVE', memberCount: 20 },
-];
-
-
-function formatDate(iso: string) {
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
+function TableSkeleton({ cols }: { cols: number }) {
+  return (
+    <div className="divide-y">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 px-4 py-3">
+          <div className="flex-1 space-y-1.5">
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-3 w-48" />
+          </div>
+          {Array.from({ length: cols - 1 }).map((__, j) => (
+            <Skeleton key={j} className="h-6 w-20 rounded-full" />
+          ))}
+          <Skeleton className="h-8 w-24 rounded ml-auto" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function AdminPage() {
-  const [users, setUsers] = useState<AdminUser[]>(MOCK_USERS);
-  const [events, setEvents] = useState<AdminEvent[]>(MOCK_EVENTS);
+  const [userPage, setUserPage] = useState(1);
+  const [eventPage, setEventPage] = useState(1);
 
-  function toggleStatus(id: string) {
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === id ? { ...u, status: u.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' } : u,
-      ),
-    );
+  const { data: stats, isLoading: statsLoading } = useAdminStats();
+  const { data: usersData, isLoading: usersLoading } = useAdminUsers({ page: userPage, limit: PAGE_SIZE });
+  const { data: eventsData, isLoading: eventsLoading } = useAdminEvents({ page: eventPage, limit: PAGE_SIZE });
+
+  const updateUserStatus = useUpdateUserStatus();
+  const archiveEvent = useArchiveEvent();
+
+  async function handleToggleUser(id: string, currentlyActive: boolean) {
+    try {
+      await updateUserStatus.mutateAsync({ id, payload: { isActive: !currentlyActive } });
+      toast.success(currentlyActive ? 'Đã vô hiệu hoá tài khoản' : 'Đã kích hoạt tài khoản');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái';
+      toast.error(msg);
+    }
   }
 
-  function archiveEvent(id: string) {
-    setEvents((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, status: 'ARCHIVED' as EventStatus } : e)),
-    );
+  async function handleArchive(id: string) {
+    try {
+      await archiveEvent.mutateAsync(id);
+      toast.success('Đã lưu trữ sự kiện');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Không thể lưu trữ sự kiện';
+      toast.error(msg);
+    }
   }
 
   return (
@@ -104,133 +106,243 @@ export default function AdminPage() {
         <p className="text-sm text-muted-foreground mt-1">Tổng quan hệ thống Titra</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        {STATS.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.title}
-                </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold tabular-nums">{stat.value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {/* Stats cards */}
+      {statsLoading ? (
+        <StatsSkeleton />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Tổng người dùng
+              </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold tabular-nums">{stats?.totalUsers ?? 0}</p>
+            </CardContent>
+          </Card>
 
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Tổng sự kiện
+              </CardTitle>
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold tabular-nums">{stats?.totalEvents ?? 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats?.activeEvents ?? 0} đang hoạt động · {stats?.archivedEvents ?? 0} đã lưu trữ
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Tổng VNĐ theo dõi
+              </CardTitle>
+              <Banknote className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold tabular-nums">{formatVND(stats?.totalVnd ?? 0)}</p>
+              <p className="text-xs text-muted-foreground mt-1">Trên tất cả sự kiện</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Users table */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Người dùng</h2>
-          <span className="text-sm text-muted-foreground">{users.length} tài khoản</span>
+          {usersData && (
+            <span className="text-sm text-muted-foreground">{usersData.total} tài khoản</span>
+          )}
         </div>
 
         <div className="rounded-lg border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Email</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Vai trò</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Trạng thái</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Ngày đăng ký</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <div>
-                      <p className="font-medium">{user.name}</p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'}>
-                      {user.role === 'ADMIN' ? 'Quản trị' : 'Người dùng'}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={user.status === 'ACTIVE' ? 'outline' : 'destructive'}>
-                      {user.status === 'ACTIVE' ? 'Hoạt động' : 'Đã vô hiệu'}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                    {formatDate(user.registeredAt)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {user.role !== 'ADMIN' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleStatus(user.id)}
-                        className={
-                          user.status === 'ACTIVE'
-                            ? 'text-destructive hover:text-destructive hover:bg-destructive/10'
-                            : ''
-                        }
-                      >
-                        {user.status === 'ACTIVE' ? 'Vô hiệu hoá' : 'Kích hoạt'}
-                      </Button>
-                    )}
-                  </td>
+          {usersLoading ? (
+            <TableSkeleton cols={4} />
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Email</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Vai trò</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                    Trạng thái
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                    Ngày đăng ký
+                  </th>
+                  <th className="px-4 py-3" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {(usersData?.items ?? []).map((user) => {
+                  const isActing =
+                    updateUserStatus.isPending && updateUserStatus.variables?.id === user.id;
+                  return (
+                    <tr key={user.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <p className="font-medium">{user.name}</p>
+                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'}>
+                          {user.role === 'ADMIN' ? 'Quản trị' : 'Người dùng'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={user.isActive ? 'outline' : 'destructive'}>
+                          {user.isActive ? 'Hoạt động' : 'Đã vô hiệu'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                        {formatDate(user.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {user.role !== 'ADMIN' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isActing}
+                            onClick={() => void handleToggleUser(user.id, user.isActive)}
+                            className={
+                              user.isActive
+                                ? 'text-destructive hover:text-destructive hover:bg-destructive/10'
+                                : ''
+                            }
+                          >
+                            {isActing ? '…' : user.isActive ? 'Vô hiệu hoá' : 'Kích hoạt'}
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
+
+        {usersData && usersData.totalPages > 1 && (
+          <div className="flex items-center justify-end gap-2">
+            <span className="text-xs text-muted-foreground">
+              Trang {usersData.page} / {usersData.totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={userPage <= 1}
+              onClick={() => setUserPage((p) => p - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={userPage >= usersData.totalPages}
+              onClick={() => setUserPage((p) => p + 1)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* Events table */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Sự kiện</h2>
-          <span className="text-sm text-muted-foreground">{events.length} sự kiện</span>
+          {eventsData && (
+            <span className="text-sm text-muted-foreground">{eventsData.total} sự kiện</span>
+          )}
         </div>
 
         <div className="rounded-lg border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tên sự kiện</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Trạng thái</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Thành viên</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {events.map((event) => (
-                <tr key={event.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <p className="font-medium">{event.name}</p>
-                    <p className="text-xs text-muted-foreground">Ban tổ chức: {event.organizerName}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={event.status} />
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                    {event.memberCount} người
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {event.status !== 'ARCHIVED' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => archiveEvent(event.id)}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        Lưu trữ
-                      </Button>
-                    )}
-                  </td>
+          {eventsLoading ? (
+            <TableSkeleton cols={3} />
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                    Tên sự kiện
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                    Trạng thái
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                    Thành viên
+                  </th>
+                  <th className="px-4 py-3" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {(eventsData?.items ?? []).map((event) => {
+                  const isArchiving =
+                    archiveEvent.isPending && archiveEvent.variables === event.id;
+                  return (
+                    <tr key={event.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <p className="font-medium">{event.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Ban tổ chức: {event.organizer.name}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={event.status} />
+                      </td>
+                      <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                        {event._count.members} người
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {event.status !== 'ARCHIVED' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isArchiving}
+                            onClick={() => void handleArchive(event.id)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            {isArchiving ? '…' : 'Lưu trữ'}
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
+
+        {eventsData && eventsData.totalPages > 1 && (
+          <div className="flex items-center justify-end gap-2">
+            <span className="text-xs text-muted-foreground">
+              Trang {eventsData.page} / {eventsData.totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={eventPage <= 1}
+              onClick={() => setEventPage((p) => p - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={eventPage >= eventsData.totalPages}
+              onClick={() => setEventPage((p) => p + 1)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

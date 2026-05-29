@@ -605,12 +605,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **PDF export**
 
-- [ ] Export button calls `/export/pdf`, shows loading state, then download link
+- [x] Export button calls `/export/pdf`, shows loading state, then download link
 
 **Admin**
 
-- [ ] Admin dashboard fetches stats, user list, and event list
-- [ ] Deactivate/activate and archive actions wired to admin endpoints
+- [x] Admin dashboard fetches stats, user list, and event list
+- [x] Deactivate/activate and archive actions wired to admin endpoints
 
 ---
 

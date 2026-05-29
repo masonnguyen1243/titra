@@ -1,5 +1,44 @@
 # Change Log — Titra
 
+## 2026-05-29 (181) — Phase 4: Admin — wire live data and action buttons
+
+**Tasks completed:**
+- Admin dashboard fetches stats, user list, and event list
+- Deactivate/activate and archive actions wired to admin endpoints
+
+**Files changed:**
+
+- `apps/web/app/(app)/admin/page.tsx` — full rewrite from mock data to live API:
+  - Removed all hardcoded `STATS`, `MOCK_USERS`, `MOCK_EVENTS` constants and local toggle/archive state.
+  - Added imports: `toast`, `ChevronLeft`, `ChevronRight`, `Skeleton`, and all five hooks from `use-admin.ts`.
+  - Added `userPage` and `eventPage` state for pagination.
+  - Stats section: driven by `useAdminStats()` with `StatsSkeleton` while loading; shows `totalUsers`, `totalEvents` (with active/archived breakdown), and `totalVnd` formatted as VNĐ.
+  - Users table: driven by `useAdminUsers({ page, limit: 20 })` with `TableSkeleton` while loading; status uses `user.isActive: boolean`; shows total count; "Vô hiệu hoá" / "Kích hoạt" calls `useUpdateUserStatus` with per-row loading (`variables.id` matching); ADMIN rows have no action button; success/error toasts on each action.
+  - Events table: driven by `useAdminEvents({ page, limit: 20 })` with `TableSkeleton` while loading; "Lưu trữ" button calls `useArchiveEvent` with per-row loading (`variables === event.id`); hidden for already-ARCHIVED events; success/error toasts.
+  - Both tables show prev/next pagination controls when `totalPages > 1`.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-29 (180) — Phase 4: PDF Export button in event layout header
+
+**Tasks completed:**
+- Export button calls `/export/pdf`, shows loading state, then download link
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/layout.tsx`:
+  - Added imports: `toast` (sonner), `Button`, `FileDown`, `Loader2`, `useExportPdf`.
+  - Added `exportPdf = useExportPdf(id)` mutation and `handleExport()` handler.
+  - `handleExport`: calls `exportPdf.mutateAsync()`, opens the returned URL in a new tab (`noopener,noreferrer`), shows a success toast with an "Mở lại" action button. On failure shows an error toast with the API error message.
+  - Added "Xuất PDF" button (with `FileDown` icon) next to the event status badges in the header; visible on all tabs from any part of the event.
+  - Button shows `Loader2` spinner and label "Đang tạo…" while the PDF is being generated; disabled during generation to prevent double-click.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
 ## 2026-05-29 (179) — Phase 4: Chat — wire real data + QA fixes (api.ts, maxLength, remove hardcoded API)
 
 **Tasks completed:**
