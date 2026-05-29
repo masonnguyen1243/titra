@@ -1,5 +1,30 @@
 # Change Log — Titra
 
+## 2026-05-29 (178) — Phase 4: Reminders — Send Reminder button with cooldown on Balances page
+
+**Tasks completed:**
+- Send Reminder button (organizer only) calls notifications API
+- Shows "last reminded at …" from API response
+- Disables button with countdown if within 24h rate limit window
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/balances/page.tsx`:
+  - Added imports: `useState`, `toast`, `Bell`, `Loader2`, `useEventDetail`, `useMe`, `useSendReminder`.
+  - Determines `isOrganizer` by cross-referencing `useMe()` with event members (same pattern as expenses/settlements pages).
+  - Tracks `lastRemindedAt: Record<memberId, ISO-string>` in local state; populated on successful reminder response.
+  - `handleRemind(memberId, nickname)`: calls `sendReminder`, updates `lastRemindedAt`, shows success toast with recipient email or error toast on failure.
+  - "Nhắc nhở" button renders next to each debtor (negative net, has a userId) when the viewer is organizer.
+  - Button shows `Loader2` spinner while in-flight; disabled during cooldown or while sending.
+  - Cooldown label: shows remaining hours (e.g., `"3h"`) on the button when within 24h window.
+  - `title` tooltip shows exact remaining hours in Vietnamese.
+  - "Đã nhắc HH:MM" timestamp shown on sm+ screens after a reminder is sent.
+  - Guest members (no `userId`) do not show the reminder button (backend would reject with 400).
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
 ## 2026-05-28 (177) — Phase 4 QA: Cloudinary proof upload in Record Settlement dialog (M4)
 
 **Tasks completed:**

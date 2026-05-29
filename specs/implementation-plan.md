@@ -586,9 +586,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Reminders**
 
-- [ ] Send Reminder button (organizer only) calls notifications API
-- [ ] Shows "last reminded at …" from API response
-- [ ] Disables button with countdown if within 24h rate limit window
+- [x] Send Reminder button (organizer only) calls notifications API
+- [x] Shows "last reminded at …" from API response
+- [x] Disables button with countdown if within 24h rate limit window
 
 **Chat**
 
