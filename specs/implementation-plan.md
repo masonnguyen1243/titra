@@ -592,16 +592,16 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Chat**
 
-- [ ] On mount, connect to Socket.io room for the event
-- [ ] Fetch message history via REST on load
-- [ ] Send message over WebSocket; append to list on `newMessage` event
-- [ ] Fall back to polling if WebSocket connection fails
+- [x] On mount, connect to Socket.io room for the event
+- [x] Fetch message history via REST on load
+- [x] Send message over WebSocket; append to list on `newMessage` event
+- [x] Fall back to polling if WebSocket connection fails
 
 **Chat — QA fixes**
 
-- [ ] Fix `chat/page.tsx`: dùng `api.ts` wrapper thay vì raw `fetch()` — `apiFetchMessages`, `apiPostMessage`, `apiGetMe` bypass timeout 30 giây của `api.ts`, không có retry cycle khi token hết hạn (401 không tự refresh), và lỗi session hiển thị chuỗi `'auth-failed'` không redirect về `/login` (S2 — 🟠 medium)
-- [ ] Fix `chat/page.tsx`: thêm `maxLength` attribute vào chat `<Input>` — backend và WebSocket gateway enforce 2000 ký tự nhưng input không có giới hạn client-side; người dùng gõ quá 2000 ký tự sẽ chỉ nhận lỗi từ server mà không có cảnh báo trước (M6 — 🟡 low)
-- [ ] Fix `chat/page.tsx`: xoá hằng số `API` hardcode — `const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'` trùng với logic trong `api.ts`; nếu env var thay đổi, chat page có thể bị bỏ sót (S2 — 🟡 low)
+- [x] Fix `chat/page.tsx`: dùng `api.ts` wrapper thay vì raw `fetch()` — `apiFetchMessages`, `apiPostMessage`, `apiGetMe` bypass timeout 30 giây của `api.ts`, không có retry cycle khi token hết hạn (401 không tự refresh), và lỗi session hiển thị chuỗi `'auth-failed'` không redirect về `/login` (S2 — 🟠 medium)
+- [x] Fix `chat/page.tsx`: thêm `maxLength` attribute vào chat `<Input>` — backend và WebSocket gateway enforce 2000 ký tự nhưng input không có giới hạn client-side; người dùng gõ quá 2000 ký tự sẽ chỉ nhận lỗi từ server mà không có cảnh báo trước (M6 — 🟡 low)
+- [x] Fix `chat/page.tsx`: xoá hằng số `API` hardcode — `const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'` trùng với logic trong `api.ts`; nếu env var thay đổi, chat page có thể bị bỏ sót (S2 — 🟡 low)
 
 **PDF export**
 

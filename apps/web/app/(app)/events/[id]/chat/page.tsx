@@ -8,8 +8,8 @@ import { MessageCircle, Send, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Avatar } from '@/components/ui/avatar';
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+import { api } from '@/lib/api';
+import { useMe } from '@/lib/hooks/use-user';
 
 interface ApiMessage {
   id: string;
@@ -20,11 +20,6 @@ interface ApiMessage {
     nickname: string | null;
     user: { name: string; avatarUrl: string | null } | null;
   };
-}
-
-interface CurrentUser {
-  id: string;
-  name: string;
 }
 
 function senderName(msg: ApiMessage): string {
@@ -38,32 +33,6 @@ function mergeMessages(existing: ApiMessage[], incoming: ApiMessage[]): ApiMessa
   return [...existing, ...fresh].sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
   );
-}
-
-async function apiFetchMessages(eventId: string): Promise<ApiMessage[]> {
-  const res = await fetch(`${API}/api/v1/events/${eventId}/messages`, {
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error('fetch-failed');
-  const data = (await res.json()) as { messages: ApiMessage[] };
-  return data.messages;
-}
-
-async function apiPostMessage(eventId: string, content: string): Promise<ApiMessage> {
-  const res = await fetch(`${API}/api/v1/events/${eventId}/messages`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content }),
-  });
-  if (!res.ok) throw new Error('send-failed');
-  return res.json() as Promise<ApiMessage>;
-}
-
-async function apiGetMe(): Promise<CurrentUser> {
-  const res = await fetch(`${API}/api/v1/users/me`, { credentials: 'include' });
-  if (!res.ok) throw new Error('auth-failed');
-  return res.json() as Promise<CurrentUser>;
 }
 
 function formatTime(iso: string): string {
@@ -88,9 +57,9 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
   const { id } = use(params);
   const [messages, setMessages] = useState<ApiMessage[]>([]);
   const [draft, setDraft] = useState('');
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
 
+  const { data: me } = useMe();
   const socketRef = useRef<Socket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -98,13 +67,6 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // Fetch current user
-  useEffect(() => {
-    void apiGetMe()
-      .then(setCurrentUser)
-      .catch(() => {});
-  }, []);
 
   // WebSocket + polling fallback
   useEffect(() => {
@@ -115,9 +77,10 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       if (polling) return;
       if (mounted) setStatus('polling');
       polling = setInterval(() => {
-        void apiFetchMessages(id)
-          .then((msgs) => {
-            if (mounted) setMessages((prev) => mergeMessages(prev, msgs));
+        void api
+          .get<{ messages: ApiMessage[] }>(`/events/${id}/messages`)
+          .then((data) => {
+            if (mounted) setMessages((prev) => mergeMessages(prev, data.messages));
           })
           .catch(() => {});
       }, 5000);
@@ -130,15 +93,17 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       }
     }
 
-    // Initial message load
-    void apiFetchMessages(id)
-      .then((msgs) => {
-        if (mounted) setMessages(msgs);
+    // Initial message load via api.ts wrapper (handles 401 refresh + 30s timeout)
+    void api
+      .get<{ messages: ApiMessage[] }>(`/events/${id}/messages`)
+      .then((data) => {
+        if (mounted) setMessages(data.messages);
       })
       .catch(() => {});
 
-    // Attempt WebSocket connection
-    const socket = io(API, {
+    // Socket.io URL is the API host (no /api/v1 path prefix needed for WS)
+    const socketUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+    const socket = io(socketUrl, {
       withCredentials: true,
       transports: ['websocket'],
       timeout: 5000,
@@ -194,7 +159,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       });
     } else {
       try {
-        const msg = await apiPostMessage(id, text);
+        const msg = await api.post<ApiMessage>(`/events/${id}/messages`, { content: text });
         setMessages((prev) => mergeMessages(prev, [msg]));
       } catch {
         setDraft(text);
@@ -214,7 +179,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       className="flex flex-col gap-0 rounded-lg border overflow-hidden"
       style={{ height: 'calc(100vh - 22rem)' }}
     >
-      {/* Polling banner */}
+      {/* Connection status banners */}
       {status === 'polling' && (
         <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50 border-b text-xs text-amber-700">
           <WifiOff className="h-3 w-3 shrink-0" />
@@ -239,7 +204,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
           />
         ) : (
           messages.map((msg, i) => {
-            const isMe = !!currentUser && senderName(msg) === currentUser.name;
+            const isMe = !!me && senderName(msg) === me.name;
             const prev = messages[i - 1];
             const showDateSep = !prev || !isSameDay(prev.createdAt, msg.createdAt);
             const showSender =
@@ -301,6 +266,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
+          maxLength={2000}
         />
         <Button
           size="icon"

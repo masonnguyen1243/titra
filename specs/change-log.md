@@ -1,5 +1,32 @@
 # Change Log — Titra
 
+## 2026-05-29 (179) — Phase 4: Chat — wire real data + QA fixes (api.ts, maxLength, remove hardcoded API)
+
+**Tasks completed:**
+- On mount, connect to Socket.io room for the event
+- Fetch message history via REST on load
+- Send message over WebSocket; append to list on `newMessage` event
+- Fall back to polling if WebSocket connection fails
+- QA S2: Replace raw `fetch()` helper functions with `api.ts` wrapper
+- QA M6: Add `maxLength={2000}` to chat Input
+- QA S2: Remove hardcoded `const API` constant
+
+**Files changed:**
+
+- `apps/web/app/(app)/events/[id]/chat/page.tsx`:
+  - Removed `const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'` module-level constant.
+  - Removed `apiFetchMessages`, `apiPostMessage`, and `apiGetMe` raw-fetch helper functions.
+  - Added imports: `api` from `@/lib/api`, `useMe` from `@/lib/hooks/use-user`.
+  - Replaced `apiGetMe()` manual effect + `currentUser` state with `useMe()` hook; `isMe` check now uses `me?.name`.
+  - Initial message load and polling now call `api.get<{ messages: ApiMessage[] }>('/events/:id/messages')` — gains 30s timeout, 401 auto-refresh, and `/login` redirect on session expiry.
+  - REST fallback send now calls `api.post<ApiMessage>('/events/:id/messages', { content })`.
+  - Socket.io URL uses `process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'` inline (no named constant).
+  - Added `maxLength={2000}` to the chat `<Input>`.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
 ## 2026-05-29 (178) — Phase 4: Reminders — Send Reminder button with cooldown on Balances page
 
 **Tasks completed:**
