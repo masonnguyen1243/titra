@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { MemberRole, MemberStatus } from '@prisma/client';
+import { MemberRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from './notifications.service';
 
@@ -8,10 +8,7 @@ import { NotificationsService } from './notifications.service';
 
 const EVENT_ID = 'event-1';
 const CALLER_ID = 'user-organizer';
-const TARGET_USER_ID = 'user-target';
 const TARGET_MEMBER_ID = 'member-target';
-
-const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 // ─── Factories ───────────────────────────────────────────────────────────────
 

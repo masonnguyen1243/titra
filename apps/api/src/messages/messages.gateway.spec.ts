@@ -148,10 +148,6 @@ describe('MessagesGateway', () => {
   describe('handleSendMessage', () => {
     const SAVED_MSG = { id: 'msg-1', content: 'Hi', createdAt: new Date() };
 
-    function setupAuth(socket: ReturnType<typeof makeSocket>) {
-      (socket as unknown as { user: JwtPayload }).user = VALID_PAYLOAD;
-    }
-
     it('saves message and broadcasts to room (excluding sender)', async () => {
       const socket = makeSocket({ user: VALID_PAYLOAD });
       (socket.to as jest.Mock).mockReturnValue({ emit: jest.fn() });
