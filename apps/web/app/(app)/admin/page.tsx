@@ -226,6 +226,13 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
+                {(usersData?.items ?? []).length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                      Không có người dùng nào
+                    </td>
+                  </tr>
+                )}
                 {(usersData?.items ?? []).map((user) => {
                   const isActing =
                     updateUserStatus.isPending && updateUserStatus.variables?.id === user.id;
@@ -253,7 +260,7 @@ export default function AdminPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            disabled={isActing}
+                            disabled={isConfirming}
                             onClick={() =>
                               setPending({
                                 type: 'deactivate',
@@ -345,6 +352,13 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
+                {(eventsData?.items ?? []).length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                      Không có sự kiện nào
+                    </td>
+                  </tr>
+                )}
                 {(eventsData?.items ?? []).map((event) => {
                   const isArchiving =
                     archiveEvent.isPending && archiveEvent.variables === event.id;
@@ -367,7 +381,7 @@ export default function AdminPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            disabled={isArchiving}
+                            disabled={isConfirming}
                             onClick={() =>
                               setPending({ type: 'archive', eventId: event.id, name: event.name })
                             }

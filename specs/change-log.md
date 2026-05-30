@@ -1,5 +1,115 @@
 # Change Log — Titra
 
+## 2026-05-30 — Phase 5 QA Fix: Component tests for formTouched + error derivation logic
+
+**Task:** Phase 5 QA M4 — add RTL component tests for `add-expense-dialog.tsx` and `record-settlement-dialog.tsx`.
+
+**New files:**
+- `apps/web/vitest.config.ts` — Vitest config: React plugin, jsdom environment, `@/` alias, global test APIs.
+- `apps/web/vitest.setup.ts` — global setup: `@testing-library/jest-dom` matchers, `ResizeObserver` / `matchMedia` / `scrollIntoView` polyfills for Radix UI.
+- `apps/web/components/features/__tests__/add-expense-dialog.test.tsx` — 7 tests covering `formTouched` guard (no errors before submit), `descError`, `amountError`, `equalError` (all members unchecked), invalid form → `onSubmit` not called, happy path payload, inline `submitError` on rejected `onSubmit`.
+- `apps/web/components/features/__tests__/record-settlement-dialog.test.tsx` — 5 tests covering no errors before submit, `amountError` after submit, invalid form → `onAdd` not called, immediate `samePersonError`, happy path payload.
+
+**Updated:**
+- `apps/web/package.json`: added `"test": "vitest run"` script; added `vitest`, `@vitejs/plugin-react`, `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`, `jsdom` to `devDependencies`.
+
+**How to test:**
+- Run `pnpm --filter web test` — all 12 tests pass in ~2s.
+
+---
+
+## 2026-05-30 — Phase 5 QA Fix: Wire offline banner to TanStack Query onlineManager
+
+**Task:** Phase 5 QA M3 — `offline-banner.tsx` text "đang thử lại…" was inaccurate; no retry was triggered.
+
+**Changes:**
+- `apps/web/components/ui/offline-banner.tsx`: replaced raw `window.addEventListener('online/offline')` with `onlineManager.subscribe()` from `@tanstack/react-query`. The banner is now driven by the same online/offline state TanStack Query uses to pause and resume queries — so when the browser reconnects, TanStack Query automatically refetches stale queries and the banner disappears in sync. Changed the text from "Mất kết nối, đang thử lại…" to "Mất kết nối internet." (accurate; the retry happens silently via `refetchOnReconnect: true`).
+
+**How to test:**
+1. Open any page in the app.
+2. DevTools → Network → set to Offline — amber banner "Mất kết nối internet." appears at the top.
+3. Set network back to Online — banner disappears immediately; TanStack Query refetches any stale queries in the background (visible in the Network tab).
+
+---
+
+## 2026-05-30 — Phase 5 QA Fix: Disable all admin action buttons while mutation is in flight
+
+**Task:** Phase 5 QA F4 — race condition in `admin/page.tsx` when clicking a different row while a mutation runs.
+
+**Changes:**
+- `apps/web/app/(app)/admin/page.tsx`: changed `disabled={isActing}` → `disabled={isConfirming}` on the user row button, and `disabled={isArchiving}` → `disabled={isConfirming}` on the event row button. `isConfirming` is already computed as `updateUserStatus.isPending || archiveEvent.isPending`, so this disables every action button across both tables the moment any mutation starts, preventing `setPending()` from swapping the dialog's target while the previous request is still in flight.
+
+**How to test:**
+1. Open Admin → Users table. Click "Vô hiệu hoá" on User A → confirm dialog opens → immediately try clicking any other row's button — all buttons are disabled while the mutation runs.
+2. Same for the Events table: click "Lưu trữ" → all other "Lưu trữ" buttons are disabled until the request completes.
+3. After the mutation resolves (success or error) all buttons return to their normal state.
+
+---
+
+## 2026-05-30 — Phase 5 QA Fix: Auto-join after email verification for invite-link signups
+
+**Task:** Phase 5 QA F3 — `/register?redirect=...` dead code; new users from invite links were not auto-joined after verification.
+
+**Changes:**
+- `apps/web/app/join/[token]/page.tsx`: replaced `/register?redirect=/join/${token}` link with `/register` + `onClick={() => sessionStorage.setItem('pendingJoinToken', token)}` — token is saved before navigating.
+- `apps/web/app/(auth)/verify-email/page.tsx` (**new file**): handles the `/verify-email?token=...` link sent by the backend. Calls `POST /auth/verify-email`, shows loading → success → auto-redirects to `/login` after 1.5 s, or shows an error card with a "Gửi lại email" link. Wrapped in `<Suspense>` as required by App Router for `useSearchParams`.
+- `apps/web/app/(auth)/login/page.tsx`: `onSubmit.onSuccess` now checks `sessionStorage.getItem('pendingJoinToken')` before the normal `returnUrl` redirect; if present, calls `POST /join/:token` and redirects to the event page (falls back to `/dashboard` on any error).
+
+**How to test:**
+1. Navigate to `/join/:active-invite-token` while logged out → click "đăng ký miễn phí" → confirm `pendingJoinToken` is set in sessionStorage (DevTools → Application → Session Storage).
+2. Complete registration → check-email page → click the verification link → `/verify-email?token=...` page shows spinner → "Email đã được xác thực!" → auto-redirects to `/login`.
+3. Log in → app calls `POST /join/:pendingJoinToken` → redirected directly to the event page; `pendingJoinToken` is removed from sessionStorage.
+4. Repeat step 3 with a bad/expired invite token → login still succeeds, redirect falls back to `/dashboard`.
+5. Navigate directly to `/verify-email` (no `?token`) → "Liên kết không hợp lệ" error card with "Gửi lại email xác thực" button.
+
+---
+
+## 2026-05-30 — Phase 5 QA Fix: Remove dead isGone (410) check from join page
+
+**Task:** Phase 5 QA F1 — `isGone` branch in `join/[token]/page.tsx` is dead code.
+
+**Changes:**
+- `apps/web/app/join/[token]/page.tsx`: removed `const isGone` declaration and replaced all `is404 || isGone` expressions with `is404` — the backend `resolveEventByInviteToken` only ever throws `NotFoundException` (404), so the 410 branch could never be reached.
+
+**How to test:**
+- Navigate to `/join/invalid-token` — error card shows "Link mời không hợp lệ" (same as before; 404 branch still fires correctly).
+- Navigate to `/join/:valid-token` — event preview card renders normally.
+- Run `pnpm --filter web typecheck` — no errors.
+
+---
+
+## 2026-05-30 — Phase 5 QA Fix: Disable join button for settled/archived events
+
+**Task:** Phase 5 QA F2 — `join/[token]/page.tsx` join button not disabled for SETTLED/ARCHIVED events.
+
+**Changes:**
+- `apps/web/app/join/[token]/page.tsx`: added `|| isSettled` to the button's `disabled` prop; when `isSettled` is true the button label becomes "Sự kiện đã kết thúc" so users understand why it's non-interactive.
+
+**How to test:**
+- Load a join link for a SETTLED or ARCHIVED event — the "Tham gia sự kiện" button is disabled and shows "Sự kiện đã kết thúc"; the amber warning text is still visible below the event description.
+- Load a join link for an ACTIVE event — the button remains enabled and functional.
+- Verify a pending join mutation still disables the button while the request is in flight.
+
+---
+
+## 2026-05-30 — Phase 5: Validation and Error States
+
+**Tasks completed:**
+
+- `apps/web/lib/api.ts`: NestJS class-validator returns `message` as a `string[]`; api.ts now joins array messages with `\n` instead of relying on `Array.toString()` (comma-separated, hard to read).
+- `apps/web/components/providers/query-provider.tsx`: added `QueryCache.onError` global handler — fires a Sonner toast for 403 ("Bạn không có quyền thực hiện thao tác này") and 500+ ("Lỗi máy chủ. Vui lòng thử lại sau.") query errors; 401 and 404 are intentionally excluded (handled in api.ts and inline page states respectively).
+- `apps/web/components/ui/offline-banner.tsx`: new client component that listens to `window` `online`/`offline` events and renders an amber banner "Mất kết nối, đang thử lại…" when the browser goes offline.
+- `apps/web/app/layout.tsx`: added `<OfflineBanner />` inside the QueryProvider so it renders on every page.
+- `apps/web/app/(app)/admin/page.tsx`: added empty-state rows to both the users table (`colspan=5`) and events table (`colspan=4`) when the API returns an empty list.
+- `apps/web/app/join/[token]/page.tsx`: fully wired to the real API — `GET /join/:token` (public) fetches event preview; shows a skeleton while loading; shows a friendly error card ("Link mời không hợp lệ hoặc đã hết hạn") on 404/410; shows event name, type, and description on success; `POST /join/:token` joins the event and redirects to `/events/:eventId`.
+
+**How to test:**
+- Go offline (DevTools → Network → Offline) — amber "Mất kết nối" banner appears at the top of every page.
+- Navigate to `/join/invalid-token` — see the error card with "Link mời không hợp lệ" and links to register/login.
+- Navigate to `/join/:valid-token` — see event name, type, and a "Tham gia sự kiện" button.
+- Open Admin page with an empty database — both tables show "Không có người dùng nào" / "Không có sự kiện nào" rows instead of an empty tbody.
+- Trigger a 403 or 500 API error in any query — a Sonner toast appears with the appropriate Vietnamese message.
+
 ## 2026-05-30 — Phase 5: Validate returnUrl before redirect after login (S1)
 
 **Tasks completed:**

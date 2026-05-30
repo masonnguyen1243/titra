@@ -95,8 +95,10 @@ async function request<T>(path: string, options: RequestOptions = {}, retry = tr
     } catch {
       /* empty */
     }
-    const message =
-      (data as { message?: string } | null)?.message ?? res.statusText;
+    const raw = (data as { message?: unknown } | null)?.message;
+    const message = Array.isArray(raw)
+      ? (raw as string[]).join('\n')
+      : (raw as string | undefined) ?? res.statusText;
     throw new ApiError(res.status, message, data);
   }
 

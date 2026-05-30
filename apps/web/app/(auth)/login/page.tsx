@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useLogin } from '@/lib/hooks/use-auth';
-import { ApiError } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 
 const GOOGLE_AUTH_URL =
   (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000') + '/api/v1/auth/google';
@@ -53,7 +53,18 @@ export default function LoginPage() {
 
   function onSubmit(values: LoginFormValues) {
     login(values, {
-      onSuccess: () => {
+      onSuccess: async () => {
+        const pendingJoinToken = sessionStorage.getItem('pendingJoinToken');
+        if (pendingJoinToken) {
+          sessionStorage.removeItem('pendingJoinToken');
+          try {
+            const data = await api.post<{ eventId: string }>(`/join/${pendingJoinToken}`);
+            router.push(`/events/${data.eventId}`);
+          } catch {
+            router.push('/dashboard');
+          }
+          return;
+        }
         const raw = sessionStorage.getItem('returnUrl') ?? '';
         sessionStorage.removeItem('returnUrl');
         const isSafe = raw.startsWith('/') && !raw.startsWith('//');

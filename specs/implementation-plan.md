@@ -668,35 +668,44 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **API error handling**
 
-- [ ] 400 Bad Request → show field-level error messages in Vietnamese
-- [ ] 401 Unauthorized → clear session, redirect to login
-- [ ] 403 Forbidden → show "Bạn không có quyền thực hiện thao tác này"
-- [ ] 404 Not Found → show inline "Không tìm thấy" message (not a full-page redirect)
-- [ ] 429 Too Many Requests (reminder rate limit) → show time remaining in Vietnamese
-- [ ] 500 Server Error → show generic error toast with retry option
-- [ ] Network offline → show "Mất kết nối, đang thử lại…" banner
+- [x] 400 Bad Request → show field-level error messages in Vietnamese (api.ts joins NestJS array messages; forms show submit error inline)
+- [x] 401 Unauthorized → clear session, redirect to login (handled in api.ts with returnUrl preservation)
+- [x] 403 Forbidden → show "Bạn không có quyền thực hiện thao tác này" (global QueryCache.onError toast)
+- [x] 404 Not Found → show inline "Không tìm thấy" message (pages render isError state inline, no full-page redirect)
+- [x] 429 Too Many Requests (reminder rate limit) → show time remaining in Vietnamese (handled locally in balances/page.tsx reminder flow)
+- [x] 500 Server Error → show generic error toast with retry option (global QueryCache.onError toast + page isError retry button)
+- [x] Network offline → show "Mất kết nối, đang thử lại…" banner (OfflineBanner component in root layout)
 
 **Loading states**
 
-- [ ] Skeleton loaders on: dashboard event list, expense list, balance view, settlement list, chat history, admin tables
-- [ ] Spinner on all form submit buttons while request is in flight
-- [ ] Disable submit button after click to prevent double-submit
+- [x] Skeleton loaders on: dashboard event list, expense list, balance view, settlement list, chat history, admin tables
+- [x] Spinner on all form submit buttons while request is in flight
+- [x] Disable submit button after click to prevent double-submit
 
 **Empty states**
 
-- [ ] Dashboard: no events yet
-- [ ] Expense list: no expenses logged
-- [ ] Balance view: everyone is settled (zero balances)
-- [ ] Settlement list: no settlements recorded
-- [ ] Chat: no messages yet
-- [ ] Admin user/event tables: no results
+- [x] Dashboard: no events yet
+- [x] Expense list: no expenses logged
+- [x] Balance view: everyone is settled (zero balances)
+- [x] Settlement list: no settlements recorded
+- [x] Chat: no messages yet
+- [x] Admin user/event tables: no results
 
 **Edge cases**
 
-- [ ] Invite link: expired or invalid token → show friendly error and link to register
-- [ ] Custom split: real-time sum display turns red when it doesn't match the total
-- [ ] Receipt upload: file too large (> 5 MB) or wrong type → show error before upload
-- [ ] Removing a member who has expenses → confirm dialog explaining their history is kept
+- [x] Invite link: expired or invalid token → show friendly error and link to register (join/[token] page wired to real API)
+- [x] Custom split: real-time sum display turns red when it doesn't match the total
+- [x] Receipt upload: file too large (> 5 MB) or wrong type → show error before upload
+- [x] Removing a member who has expenses → confirm dialog explaining their history is kept
+
+**Phase 5 — QA fixes**
+
+- [x] Fix `join/[token]/page.tsx`: nút "Tham gia sự kiện" không bị disable khi `event.status === 'SETTLED' || 'ARCHIVED'` — warning text hiển thị nhưng button vẫn enabled; user có thể cố tham gia event đã kết thúc và nhận lỗi từ server không rõ ràng. Cần thêm `disabled={isSettled}` hoặc đổi label/action khi `isSettled` (F2 — 🟠 medium)
+- [x] Fix `join/[token]/page.tsx`: kiểm tra `error.status === 410` là dead code — backend `resolveEventByInviteToken` chỉ throw `NotFoundException` (404), không bao giờ trả 410; `isGone` branch không bao giờ chạy. Cần bỏ `isGone` hoặc backend implement 410 cho expired token (F1 — 🟡 low)
+- [x] Fix `join/[token]/page.tsx` + `register/page.tsx`: link `/register?redirect=/join/${token}` là dead code — register page không đọc query param `redirect`, luôn chuyển về `/check-email`; người dùng mới đăng ký qua invite link không được tự động tham gia event sau verification. Đây là vi phạm spec §5.2 ("new users register then auto-join"). Cần implement logic auto-join sau khi verify email (lưu `pendingJoinToken` vào sessionStorage trước khi redirect sang register, sau đó post join khi quay về) (F3 — 🟠 high)
+- [x] Fix `admin/page.tsx`: race condition khi click hàng khác trong lúc mutation đang chạy — `isActing` chỉ disable đúng hàng đang xử lý; hàng khác vẫn có thể gọi `setPending()`, dialog update sang action mới nhưng `isConfirming = true` vì mutation cũ đang chạy, gây nhầm lẫn. Cần disable tất cả action button khi `updateUserStatus.isPending || archiveEvent.isPending` (F4 — 🟡 low)
+- [x] Fix `offline-banner.tsx`: text "đang thử lại…" không chính xác — không có retry logic nào được trigger khi reconnect; nên đổi thành "Mất kết nối internet." hoặc wire `onlineManager` của TanStack Query để actually refetch stale queries khi `online` event fire (M3 — 🟡 low)
+- [x] Thêm component tests cho validation logic mới — `add-expense-dialog.tsx` và `record-settlement-dialog.tsx` có thêm logic `formTouched` + error derivation nhưng không có RTL test; test plan yêu cầu coverage 70% cho frontend components (M4 — 🟠 medium)
 
 ---
 

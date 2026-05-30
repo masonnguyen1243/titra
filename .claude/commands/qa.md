@@ -19,3 +19,5 @@ Rules:
 - Do not modify the code. Just report.
 - Do not add new features
 - Do not change architecture
+- Do not run git commands
+- and a summary in Vietnamese
