@@ -657,6 +657,15 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Record Settlement: amount > 0, method required
 - [x] Chat input: non-empty message
 
+**Form validation — QA fixes**
+
+- [x] Fix `record-settlement-dialog.tsx`: error messages (`amountError`, `methodError`) không bao giờ hiện — submit button bị `disabled={!isValid}` nên `handleSubmit` không được gọi khi form invalid; `formTouched` không bao giờ được set → không có lỗi nào hiển thị. Cần đổi thành `disabled={isSubmitting || isUploading}` giống pattern đúng của `add-expense-dialog.tsx` (F1 — 🔴 critical)
+- [x] Fix `login.dto.ts`: thiếu `@IsNotEmpty()` trên field `password` — empty string vượt qua `@IsString()` + `@MaxLength(128)` và chạm tới `bcrypt.compare()`; cần thêm `@IsNotEmpty()` hoặc `@MinLength(1)` để reject sớm ở DTO layer (F2 — 🟠 medium)
+- [x] Fix `events/new/page.tsx` `handleFileChange`: thiếu runtime MIME type check cho cover photo — chỉ kiểm tra `file.size`, không kiểm tra `file.type`; `accept` attribute có thể bypass bằng cách đổi tên file; cần validate `file.type` thuộc `['image/jpeg', 'image/png']` giống pattern đã dùng cho receipt và proof upload (F3 — 🟠 medium)
+- [x] Fix `register/page.tsx` Zod schema: thêm `max(100)` cho `name` và `max(128)` cho `password` để khớp giới hạn backend DTO — hiện tại client không warn trước khi submit, user nhận 400 từ server với message không rõ ràng (M1 — 🟡 low)
+- [x] Fix `record-settlement-dialog.tsx`: file input `accept` thiếu `image/heif` — `ALLOWED_PROOF_TYPES` có `image/heif` nhưng `accept="image/jpeg,image/png,image/heic"` không bao gồm; file `.heif` không xuất hiện trong file picker dù sẽ pass runtime MIME check (M2 — 🟡 low)
+- [x] Fix `login/page.tsx`: validate `returnUrl` từ `sessionStorage` là internal path trước khi dùng trong `router.push` — nếu XSS hoặc future code ghi giá trị tuỳ ý vào key `returnUrl`, login page sẽ redirect ra ngoài domain; cần guard `returnUrl.startsWith('/') && !returnUrl.startsWith('//')` (S1 — 🟡 low)
+
 **API error handling**
 
 - [ ] 400 Bad Request → show field-level error messages in Vietnamese

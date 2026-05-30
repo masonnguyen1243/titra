@@ -54,9 +54,10 @@ export default function LoginPage() {
   function onSubmit(values: LoginFormValues) {
     login(values, {
       onSuccess: () => {
-        const returnUrl = sessionStorage.getItem('returnUrl') ?? '/dashboard';
+        const raw = sessionStorage.getItem('returnUrl') ?? '';
         sessionStorage.removeItem('returnUrl');
-        router.push(returnUrl);
+        const isSafe = raw.startsWith('/') && !raw.startsWith('//');
+        router.push(isSafe ? raw : '/dashboard');
       },
       onError: (err) => {
         const message =

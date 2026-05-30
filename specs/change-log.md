@@ -1,5 +1,53 @@
 # Change Log — Titra
 
+## 2026-05-30 — Phase 5: Validate returnUrl before redirect after login (S1)
+
+**Tasks completed:**
+
+- `apps/web/app/(auth)/login/page.tsx`: replaced the direct `sessionStorage.getItem('returnUrl') ?? '/dashboard'` with a safety check.
+- Guard: `raw.startsWith('/') && !raw.startsWith('//')` — accepts only same-origin paths; rejects absolute URLs (`https://evil.com`), protocol-relative URLs (`//evil.com`), and empty strings, falling back to `/dashboard`.
+- Prevents an open-redirect if XSS or future code writes an arbitrary value to the `returnUrl` sessionStorage key.
+
+## 2026-05-30 — Phase 5: Add image/heif to proof upload accept attribute (M2)
+
+**Tasks completed:**
+
+- `apps/web/components/features/record-settlement-dialog.tsx`: added `image/heif` to the file input's `accept` attribute (`accept="image/jpeg,image/png,image/heic,image/heif"`).
+- `ALLOWED_PROOF_TYPES` already included `image/heif` for runtime MIME validation; the `accept` attribute was the only gap preventing `.heif` files from appearing in the OS file picker.
+
+## 2026-05-30 — Phase 5: Add max-length constraints to register form Zod schema (M1)
+
+**Tasks completed:**
+
+- `apps/web/app/(auth)/register/page.tsx`: added `.max(100, 'Họ và tên không được vượt quá 100 ký tự')` to the `name` field.
+- Added `.max(128, 'Mật khẩu không được vượt quá 128 ký tự')` to the `password` field.
+- These limits now match the backend `RegisterDto` (`@MaxLength(100)` / `@MaxLength(128)`), so users see a clear Vietnamese error inline before a network round-trip.
+
+## 2026-05-30 — Phase 5: Runtime MIME type check for cover photo upload (F3)
+
+**Tasks completed:**
+
+- `apps/web/app/(app)/events/new/page.tsx`: added `ALLOWED_COVER_TYPES = ['image/jpeg', 'image/png']` constant.
+- `handleFileChange`: added MIME type check (`file.type` must be in allowed list) before the existing size check; shows "Chỉ chấp nhận ảnh JPG hoặc PNG." and resets the input on invalid type.
+- Prevents `accept` attribute bypass (renaming e.g. a `.gif` to `.jpg`) from sneaking through to preview or future Cloudinary upload.
+
+## 2026-05-30 — Phase 5: Add @IsNotEmpty to LoginDto.password (F2)
+
+**Tasks completed:**
+
+- `apps/api/src/auth/dto/login.dto.ts`: added `@IsNotEmpty()` decorator to the `password` field.
+- Previously an empty string `""` passed `@IsString()` + `@MaxLength(128)` and reached `bcrypt.compare()`, causing unnecessary CPU work and a potentially misleading 401 path.
+- Now an empty password is rejected at the DTO validation layer with a 400 response before any DB or bcrypt call.
+
+## 2026-05-30 — Phase 5: Fix record-settlement-dialog submit button disabled condition (F1)
+
+**Tasks completed:**
+
+- `record-settlement-dialog.tsx`: removed `!isValid` from the submit button's `disabled` prop.
+- Previously `disabled={!isValid || isSubmitting || isUploading}` prevented `handleSubmit` from ever being called when the form was invalid, so `setFormTouched(true)` never fired and `amountError` / `methodError` were never shown.
+- Now `disabled={isSubmitting || isUploading}` — clicking submit when invalid calls `handleSubmit`, sets `formTouched(true)`, shows error messages, then returns early via `if (!isValid) return`.
+- Matches the pattern already in place in `add-expense-dialog.tsx`.
+
 ## 2026-05-30 — Phase 5: Chat input non-empty validation (verified complete)
 
 **Tasks completed:**

@@ -25,7 +25,8 @@ import { ApiError } from '@/lib/api';
 
 type EventType = 'TRIP' | 'MEAL' | 'OTHER';
 
-const MAX_COVER_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_COVER_SIZE = 5 * 1024 * 1024;
+const ALLOWED_COVER_TYPES = ['image/jpeg', 'image/png'];
 
 const EVENT_TYPES: { value: EventType; label: string; emoji: string }[] = [
   { value: 'TRIP', label: 'Chuyến đi', emoji: '✈️' },
@@ -67,6 +68,12 @@ export default function NewEventPage() {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!ALLOWED_COVER_TYPES.includes(file.type)) {
+      setCoverError('Chỉ chấp nhận ảnh JPG hoặc PNG.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
 
     if (file.size > MAX_COVER_SIZE) {
       setCoverError('Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5 MB.');

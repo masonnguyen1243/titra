@@ -367,7 +367,7 @@ export default function RecordSettlementDialog({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/heic"
+                  accept="image/jpeg,image/png,image/heic,image/heif"
                   className="sr-only"
                   onChange={(e) => void handleProofChange(e)}
                 />
@@ -390,7 +390,7 @@ export default function RecordSettlementDialog({
           </Button>
           <Button
             onClick={() => void handleSubmit()}
-            disabled={!isValid || isSubmitting || isUploading}
+            disabled={isSubmitting || isUploading}
           >
             {(isSubmitting || isUploading) && (
               <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
