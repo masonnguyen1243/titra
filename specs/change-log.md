@@ -1,5 +1,44 @@
 # Change Log — Titra
 
+## 2026-05-30 (189) — Admin page: confirm dialog before deactivate / archive (S3)
+
+**Tasks completed:**
+- Fix `admin/page.tsx`: deactivating a user or archiving an event now shows a confirm dialog explaining the consequence before firing the mutation.
+
+**Files changed:**
+
+- `apps/web/app/(app)/admin/page.tsx`:
+  - Added `PendingAction` discriminated union type (`'deactivate'` | `'archive'`) to describe the action awaiting confirmation.
+  - Added `pending` state (null or a `PendingAction`).
+  - Removed `handleToggleUser` and `handleArchive` direct-fire functions; replaced with `confirmAction()` which reads from `pending`.
+  - User "Vô hiệu hoá" / "Kích hoạt" buttons now call `setPending(...)` instead of mutating directly.
+  - Archive "Lưu trữ" button now calls `setPending(...)` instead of mutating directly.
+  - Added a `Dialog` at the end of the page that renders when `pending !== null`:
+    - Title and description are contextual (deactivate vs activate vs archive, shows the user/event name).
+    - Deactivate description explicitly warns "phiên đăng nhập sẽ bị thu hồi".
+    - "Huỷ" button closes the dialog; "Xác nhận" calls `confirmAction()` and is disabled while the mutation is in flight.
+  - Imported `Dialog`, `DialogContent`, `DialogHeader`, `DialogFooter`, `DialogTitle`, `DialogDescription` from `@/components/ui/dialog`.
+  - TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-30 (188) — Admin page: add error states for stats, users, and events sections (M2)
+
+**Tasks completed:**
+- Fix `admin/page.tsx`: each of the three query sections (stats cards, users table, events table) now shows an error message and "Thử lại" button when the API call fails, instead of silently rendering zeros or empty tables.
+
+**Files changed:**
+
+- `apps/web/app/(app)/admin/page.tsx`:
+  - Added `useQueryClient` import and `adminKeys` import from `use-admin`.
+  - Destructured `isError` from all three queries (`useAdminStats`, `useAdminUsers`, `useAdminEvents`).
+  - Stats section: renders a centered error message + "Thử lại" button that calls `qc.invalidateQueries(adminKeys.stats())` when `statsError` is true.
+  - Users table: renders a centered error message + "Thử lại" button (invalidates user query for the current page) when `usersError` is true.
+  - Events table: renders a centered error message + "Thử lại" button (invalidates events query for the current page) when `eventsError` is true.
+  - TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
 ## 2026-05-30 (187) — PDF export security fix: authenticated upload + 24 h signed URL (S2)
 
 **Tasks completed:**

@@ -3,18 +3,32 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Users, CalendarDays, Banknote, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/ui/status-badge';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
   useAdminStats,
   useAdminUsers,
   useAdminEvents,
   useUpdateUserStatus,
   useArchiveEvent,
+  adminKeys,
 } from '@/lib/hooks/use-admin';
+
+type PendingAction =
+  | { type: 'deactivate'; userId: string; name: string; isActive: boolean }
+  | { type: 'archive'; eventId: string; name: string };
 
 const PAGE_SIZE = 20;
 
@@ -71,30 +85,39 @@ function TableSkeleton({ cols }: { cols: number }) {
 export default function AdminPage() {
   const [userPage, setUserPage] = useState(1);
   const [eventPage, setEventPage] = useState(1);
+  const [pending, setPending] = useState<PendingAction | null>(null);
+  const qc = useQueryClient();
 
-  const { data: stats, isLoading: statsLoading } = useAdminStats();
-  const { data: usersData, isLoading: usersLoading } = useAdminUsers({ page: userPage, limit: PAGE_SIZE });
-  const { data: eventsData, isLoading: eventsLoading } = useAdminEvents({ page: eventPage, limit: PAGE_SIZE });
+  const { data: stats, isLoading: statsLoading, isError: statsError } = useAdminStats();
+  const { data: usersData, isLoading: usersLoading, isError: usersError } = useAdminUsers({ page: userPage, limit: PAGE_SIZE });
+  const { data: eventsData, isLoading: eventsLoading, isError: eventsError } = useAdminEvents({ page: eventPage, limit: PAGE_SIZE });
 
   const updateUserStatus = useUpdateUserStatus();
   const archiveEvent = useArchiveEvent();
 
-  async function handleToggleUser(id: string, currentlyActive: boolean) {
-    try {
-      await updateUserStatus.mutateAsync({ id, payload: { isActive: !currentlyActive } });
-      toast.success(currentlyActive ? 'Đã vô hiệu hoá tài khoản' : 'Đã kích hoạt tài khoản');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái';
-      toast.error(msg);
-    }
-  }
+  const isConfirming = updateUserStatus.isPending || archiveEvent.isPending;
 
-  async function handleArchive(id: string) {
+  async function confirmAction() {
+    if (!pending) return;
     try {
-      await archiveEvent.mutateAsync(id);
-      toast.success('Đã lưu trữ sự kiện');
+      if (pending.type === 'deactivate') {
+        await updateUserStatus.mutateAsync({
+          id: pending.userId,
+          payload: { isActive: !pending.isActive },
+        });
+        toast.success(pending.isActive ? 'Đã vô hiệu hoá tài khoản' : 'Đã kích hoạt tài khoản');
+      } else {
+        await archiveEvent.mutateAsync(pending.eventId);
+        toast.success('Đã lưu trữ sự kiện');
+      }
+      setPending(null);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Không thể lưu trữ sự kiện';
+      const msg =
+        err instanceof Error
+          ? err.message
+          : pending.type === 'deactivate'
+            ? 'Không thể cập nhật trạng thái'
+            : 'Không thể lưu trữ sự kiện';
       toast.error(msg);
     }
   }
@@ -109,6 +132,17 @@ export default function AdminPage() {
       {/* Stats cards */}
       {statsLoading ? (
         <StatsSkeleton />
+      ) : statsError ? (
+        <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
+          <p className="text-sm text-destructive">Không thể tải thống kê. Vui lòng thử lại.</p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void qc.invalidateQueries({ queryKey: adminKeys.stats() })}
+          >
+            Thử lại
+          </Button>
+        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-3">
           <Card>
@@ -165,6 +199,17 @@ export default function AdminPage() {
         <div className="rounded-lg border overflow-hidden">
           {usersLoading ? (
             <TableSkeleton cols={4} />
+          ) : usersError ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
+              <p className="text-sm text-destructive">Không thể tải danh sách người dùng. Vui lòng thử lại.</p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void qc.invalidateQueries({ queryKey: adminKeys.users({ page: userPage, limit: PAGE_SIZE }) })}
+              >
+                Thử lại
+              </Button>
+            </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -209,7 +254,14 @@ export default function AdminPage() {
                             variant="outline"
                             size="sm"
                             disabled={isActing}
-                            onClick={() => void handleToggleUser(user.id, user.isActive)}
+                            onClick={() =>
+                              setPending({
+                                type: 'deactivate',
+                                userId: user.id,
+                                name: user.name,
+                                isActive: user.isActive,
+                              })
+                            }
                             className={
                               user.isActive
                                 ? 'text-destructive hover:text-destructive hover:bg-destructive/10'
@@ -265,6 +317,17 @@ export default function AdminPage() {
         <div className="rounded-lg border overflow-hidden">
           {eventsLoading ? (
             <TableSkeleton cols={3} />
+          ) : eventsError ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
+              <p className="text-sm text-destructive">Không thể tải danh sách sự kiện. Vui lòng thử lại.</p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void qc.invalidateQueries({ queryKey: adminKeys.events({ page: eventPage, limit: PAGE_SIZE }) })}
+              >
+                Thử lại
+              </Button>
+            </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -305,7 +368,9 @@ export default function AdminPage() {
                             variant="outline"
                             size="sm"
                             disabled={isArchiving}
-                            onClick={() => void handleArchive(event.id)}
+                            onClick={() =>
+                              setPending({ type: 'archive', eventId: event.id, name: event.name })
+                            }
                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
                             {isArchiving ? '…' : 'Lưu trữ'}
@@ -344,6 +409,40 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* Confirm dialog */}
+      <Dialog open={!!pending} onOpenChange={(open) => { if (!open) setPending(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {pending?.type === 'deactivate'
+                ? pending.isActive
+                  ? 'Vô hiệu hoá tài khoản'
+                  : 'Kích hoạt tài khoản'
+                : 'Lưu trữ sự kiện'}
+            </DialogTitle>
+            <DialogDescription>
+              {pending?.type === 'deactivate'
+                ? pending.isActive
+                  ? `Tài khoản của ${pending.name} sẽ bị khoá ngay lập tức và tất cả phiên đăng nhập sẽ bị thu hồi. Bạn có chắc chắn không?`
+                  : `Tài khoản của ${pending.name} sẽ được kích hoạt trở lại. Bạn có chắc chắn không?`
+                : `Sự kiện "${pending?.name}" sẽ được chuyển sang trạng thái Đã lưu trữ và không thể chỉnh sửa thêm. Bạn có chắc chắn không?`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" disabled={isConfirming} onClick={() => setPending(null)}>
+              Huỷ
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isConfirming}
+              onClick={() => void confirmAction()}
+            >
+              {isConfirming ? '…' : 'Xác nhận'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

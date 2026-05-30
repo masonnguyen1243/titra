@@ -623,8 +623,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Admin — QA fixes**
 
-- [ ] Fix `admin/page.tsx`: thêm error states cho ba query stats / users / events — khi API lỗi, sections render im lặng (0 / empty table) thay vì hiển thị thông báo lỗi và nút "Thử lại"; không nhất quán với mọi trang khác trong app (M2 — 🟠 medium)
-- [ ] Fix `admin/page.tsx`: thêm confirm dialog trước khi deactivate user hoặc archive event — hai thao tác fire ngay khi click, không có bước xác nhận; deactivate user có hậu quả tức thì (lock out + revoke tokens) (S3 — 🟡 low)
+- [x] Fix `admin/page.tsx`: thêm error states cho ba query stats / users / events — khi API lỗi, sections render im lặng (0 / empty table) thay vì hiển thị thông báo lỗi và nút "Thử lại"; không nhất quán với mọi trang khác trong app (M2 — 🟠 medium)
+- [x] Fix `admin/page.tsx`: thêm confirm dialog trước khi deactivate user hoặc archive event — hai thao tác fire ngay khi click, không có bước xác nhận; deactivate user có hậu quả tức thì (lock out + revoke tokens) (S3 — 🟡 low)
 
 **Balances — QA fixes (Round 2)**
 
