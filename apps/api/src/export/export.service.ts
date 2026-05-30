@@ -5,7 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { MemberStatus, SettlementStatus } from '@prisma/client';
+import { MemberRole, MemberStatus, SettlementStatus } from '@prisma/client';
 import { BalanceService, MemberBalance } from '../expenses/balance.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudinaryService } from '../upload/cloudinary.service';
@@ -32,6 +32,8 @@ export class ExportService {
             id: true,
             nickname: true,
             userId: true,
+            role: true,
+            user: { select: { email: true, name: true } },
             paidExpenses: {
               where: { deletedAt: null },
               select: { amount: true },
@@ -77,9 +79,11 @@ export class ExportService {
       throw new NotFoundException('Sự kiện không tồn tại');
     }
 
-    const isMember = event.members.some((m) => m.userId === callerId);
-    if (!isMember) {
-      throw new ForbiddenException('Bạn không phải thành viên của sự kiện này');
+    const isOrganizer = event.members.some(
+      (m) => m.userId === callerId && m.role === MemberRole.ORGANIZER,
+    );
+    if (!isOrganizer) {
+      throw new ForbiddenException('Chỉ organizer mới có thể xuất báo cáo PDF');
     }
 
     const memberBalances: MemberBalance[] = event.members.map((m) => {
@@ -106,8 +110,70 @@ export class ExportService {
     }
 
     const publicId = `event-reports/${eventId}-${Date.now()}`;
-    const uploadResult = await this.cloudinary.uploadBuffer(pdfBuffer, 'event-reports', publicId);
+    const uploadResult = await this.cloudinary.uploadBuffer(
+      pdfBuffer,
+      'event-reports',
+      publicId,
+      { type: 'authenticated' },
+    );
 
-    return { url: uploadResult.secureUrl };
+    // Signed URL valid for 24 hours — prevents permanent public exposure of financial data.
+    const PDF_TTL_SECONDS = 24 * 60 * 60;
+    const signedUrl = this.cloudinary.generateSignedUrl(uploadResult.publicId, PDF_TTL_SECONDS);
+
+    const organizerMember = event.members.find(
+      (m) => m.userId === callerId && m.role === MemberRole.ORGANIZER,
+    );
+    if (organizerMember?.user) {
+      void this.sendPdfEmail(
+        organizerMember.user.email,
+        organizerMember.user.name,
+        event.name,
+        signedUrl,
+      );
+    }
+
+    return { url: signedUrl };
+  }
+
+  private async sendPdfEmail(
+    email: string,
+    name: string,
+    eventName: string,
+    pdfUrl: string,
+  ): Promise<void> {
+    const resendApiKey = process.env['RESEND_API_KEY'];
+    if (!resendApiKey) {
+      this.logger.log(
+        `[DEV] PDF email to ${email} for event "${eventName}", url: ${pdfUrl}`,
+      );
+      return;
+    }
+
+    const escapeHtml = (str: string) =>
+      str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    try {
+      const { Resend } = await import('resend');
+      const resend = new Resend(resendApiKey);
+      await resend.emails.send({
+        from: process.env['EMAIL_FROM'] ?? 'onboarding@resend.dev',
+        to: email,
+        subject: `Báo cáo PDF — ${escapeHtml(eventName)} | Titra`,
+        html: `
+          <p>Xin chào ${escapeHtml(name)},</p>
+          <p>Báo cáo PDF cho sự kiện <strong>${escapeHtml(eventName)}</strong> đã sẵn sàng.</p>
+          <p><a href="${pdfUrl}">Tải xuống báo cáo PDF</a></p>
+          <p>Cảm ơn bạn đã sử dụng Titra!</p>
+        `,
+      });
+    } catch (err) {
+      this.logger.error(`Failed to send PDF email to ${email}`, err);
+    }
   }
 }

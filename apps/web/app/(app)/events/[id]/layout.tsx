@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Users, ArrowLeft, FileDown, Loader2 } from 'lucide-react';
 import { useEventDetail, type EventType, type EventStatus } from '@/lib/hooks/use-events';
 import { useExportPdf } from '@/lib/hooks/use-export';
+import { useMe } from '@/lib/hooks/use-user';
 
 const TYPE_LABELS: Record<EventType, string> = {
   TRIP: 'Chuyến đi',
@@ -48,7 +49,10 @@ export default function EventLayout({
   const { id } = use(params);
   const pathname = usePathname();
   const { data: event, isLoading, isError } = useEventDetail(id);
+  const { data: me } = useMe();
   const exportPdf = useExportPdf(id);
+
+  const isOrganizer = !!event && !!me && event.organizerId === me.id;
 
   async function handleExport() {
     try {
@@ -118,20 +122,22 @@ export default function EventLayout({
               <Badge variant={STATUS_VARIANTS[event.status]}>
                 {STATUS_LABELS[event.status]}
               </Badge>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5"
-                disabled={exportPdf.isPending}
-                onClick={() => void handleExport()}
-              >
-                {exportPdf.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <FileDown className="h-3.5 w-3.5" />
-                )}
-                {exportPdf.isPending ? 'Đang tạo…' : 'Xuất PDF'}
-              </Button>
+              {isOrganizer && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                  disabled={exportPdf.isPending}
+                  onClick={() => void handleExport()}
+                >
+                  {exportPdf.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <FileDown className="h-3.5 w-3.5" />
+                  )}
+                  {exportPdf.isPending ? 'Đang tạo…' : 'Xuất PDF'}
+                </Button>
+              )}
             </div>
           </div>
         )}

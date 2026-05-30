@@ -1,5 +1,114 @@
 # Change Log — Titra
 
+## 2026-05-30 (187) — PDF export security fix: authenticated upload + 24 h signed URL (S2)
+
+**Tasks completed:**
+- Security: replace permanent public Cloudinary URL for PDFs with a 24-hour signed URL backed by an authenticated (private) asset
+
+**Files changed:**
+
+- `apps/api/src/upload/cloudinary.service.ts`:
+  - `uploadBuffer` gains optional 4th param `options?: { type?: 'upload' | 'authenticated' }`. Defaults to `'upload'` so existing callers (receipts) are unaffected.
+  - Added `generateSignedUrl(publicId, ttlSeconds): string` — calls `cloudinary.url()` with `sign_url: true`, `type: 'authenticated'`, `resource_type: 'raw'`, and `expires_at = now + ttlSeconds`. Dev mock returns a descriptive fake URL.
+
+- `apps/api/src/export/export.service.ts`:
+  - PDF is now uploaded with `{ type: 'authenticated' }`, making it inaccessible without a valid signature.
+  - After upload, `generateSignedUrl(publicId, 86400)` produces a URL valid for 24 hours.
+  - Both the HTTP response `{ url }` and the organizer email now carry the signed URL instead of the raw `secureUrl`.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-30 (186) — PDF export QA fix: translate settlement status to Vietnamese (F5)
+
+**Tasks completed:**
+- Fix `pdf.generator.ts`: render settlement status in Vietnamese instead of raw English enum strings
+
+**Files changed:**
+
+- `apps/api/src/export/pdf.generator.ts`:
+  - Added `SETTLEMENT_STATUS_VI` lookup map: `PENDING → "Chờ xác nhận"`, `CONFIRMED → "Đã xác nhận"`.
+  - Added `fmtSettlementStatus(status)` helper that uses the map with a raw-string fallback for any future statuses.
+  - Settlement history table now calls `fmtSettlementStatus(s.status)` instead of rendering `s.status` directly.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-30 (185) — PDF export QA fix: show date range in PDF header (F4)
+
+**Tasks completed:**
+- Fix `pdf.generator.ts`: replace single `createdAt` with activity date range derived from expenses
+
+**Files changed:**
+
+- `apps/api/src/export/pdf.generator.ts`:
+  - Computes `expenseDates` as `event.expenses.map(e => new Date(e.createdAt).getTime())`.
+  - `dateRangeText`: when expenses exist, formats `MIN – MAX` dates using `fmtDate`; when no expenses, falls back to `fmtDate(event.createdAt)`.
+  - Subtitle line changed from `"Tạo ngày: <date>"` to `"Khoảng thời gian: <start> – <end>"`, satisfying spec §5.9 "event name and date range".
+  - No service or type changes needed.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-30 (184) — PDF export QA fix: add split breakdown to expense table (F3)
+
+**Tasks completed:**
+- Fix `pdf.generator.ts`: render split data under each expense row in the PDF
+
+**Files changed:**
+
+- `apps/api/src/export/pdf.generator.ts`:
+  - Added two new styles: `splitRow` (indented flex row, 8pt font, grey border) and `splitLabel` / `splitValue` for the label + content.
+  - Changed `event.expenses.map(...)` → `event.expenses.flatMap(...)`: for each expense, the main row is emitted as before, then (when `exp.splits.length > 0`) a compact sub-row is appended showing "Phân chia: MemberA: X ₫  |  MemberB: Y ₫".
+  - The `splits` field was already fetched by `export.service.ts` and typed in `PdfExpense` — no service or type changes needed.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0).
+
+---
+
+## 2026-05-30 (183) — PDF export QA fix: send download link email to organizer (F2)
+
+**Tasks completed:**
+- Fix `export.service.ts`: send the PDF download link to the organizer's email after generation
+
+**Files changed:**
+
+- `apps/api/src/export/export.service.ts`:
+  - Added `user: { select: { email: true, name: true } }` to the member select in the existing Prisma query — no extra round-trip needed.
+  - After the Cloudinary upload, finds the organizer member and fires `void this.sendPdfEmail(...)` (fire-and-forget, same pattern as `NotificationsService`).
+  - Added private `sendPdfEmail(email, name, eventName, pdfUrl)`: when `RESEND_API_KEY` is absent it logs a `[DEV]` line; otherwise sends a Vietnamese-language email via Resend with a direct download link.
+  - `escapeHtml` is defined locally inside the service (copied pattern from `NotificationsService`).
+  - Email failures are caught and logged; they do not affect the HTTP response.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0 for `api`).
+
+---
+
+## 2026-05-30 (182) — PDF export QA fix: restrict to ORGANIZER only (F1)
+
+**Tasks completed:**
+- Fix `export.service.ts` + `layout.tsx`: restrict PDF export to ORGANIZER only
+
+**Files changed:**
+
+- `apps/api/src/export/export.service.ts`:
+  - Imported `MemberRole` from `@prisma/client`.
+  - Added `role: true` to the member select in `exportEventPdf`.
+  - Replaced `isMember` check with `isOrganizer` check: `m.userId === callerId && m.role === MemberRole.ORGANIZER`.
+  - 403 message changed to `'Chỉ organizer mới có thể xuất báo cáo PDF'`.
+
+- `apps/web/app/(app)/events/[id]/layout.tsx`:
+  - Imported `useMe` from `@/lib/hooks/use-user`.
+  - Added `const { data: me } = useMe()` and derived `isOrganizer = !!event && !!me && event.organizerId === me.id`.
+  - Wrapped the Export PDF `<Button>` in `{isOrganizer && (...)}` so it only renders for the event organizer.
+
+- TypeScript passes cleanly (`tsc --noEmit` exits 0 for both `api` and `web`).
+
+---
+
 ## 2026-05-29 (181) — Phase 4: Admin — wire live data and action buttons
 
 **Tasks completed:**

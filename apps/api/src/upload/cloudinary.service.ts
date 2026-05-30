@@ -64,8 +64,15 @@ export class CloudinaryService {
 
   /**
    * Server-side upload from a buffer (used by the export module for PDFs).
+   * Pass `options.type = 'authenticated'` to make the asset private so it can
+   * only be delivered via a signed URL.
    */
-  async uploadBuffer(buffer: Buffer, folder: string, publicId?: string): Promise<UploadResult> {
+  async uploadBuffer(
+    buffer: Buffer,
+    folder: string,
+    publicId?: string,
+    options?: { type?: 'upload' | 'authenticated' },
+  ): Promise<UploadResult> {
     if (!this.configured) {
       this.logger.log(`[DEV] Mock upload buffer to folder "${folder}"`);
       return {
@@ -81,6 +88,7 @@ export class CloudinaryService {
         folder,
         ...(publicId && { public_id: publicId }),
         resource_type: 'auto' as const,
+        type: (options?.type ?? 'upload') as 'upload' | 'authenticated',
       };
 
       cloudinary.uploader
@@ -98,6 +106,23 @@ export class CloudinaryService {
           });
         })
         .end(buffer);
+    });
+  }
+
+  /**
+   * Generates a time-limited signed delivery URL for an authenticated asset.
+   * The URL is valid for `ttlSeconds` from now.
+   */
+  generateSignedUrl(publicId: string, ttlSeconds: number): string {
+    if (!this.configured) {
+      return `https://res.cloudinary.com/mock/raw/authenticated/${publicId}?mock-signed-ttl=${ttlSeconds}`;
+    }
+    return cloudinary.url(publicId, {
+      type: 'authenticated',
+      resource_type: 'raw',
+      sign_url: true,
+      expires_at: Math.floor(Date.now() / 1000) + ttlSeconds,
+      secure: true,
     });
   }
 

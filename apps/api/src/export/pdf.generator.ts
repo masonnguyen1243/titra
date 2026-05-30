@@ -69,6 +69,9 @@ const S = StyleSheet.create({
   balanceNeg: { color: '#dc2626', fontFamily: 'Helvetica-Bold' },
   footer: { position: 'absolute', bottom: 30, left: 40, right: 40, fontSize: 8, color: '#aaa', textAlign: 'center' },
   noData: { color: '#888', fontStyle: 'italic' },
+  splitRow: { flexDirection: 'row', paddingLeft: 12, paddingTop: 2, paddingBottom: 4, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  splitLabel: { width: 60, fontSize: 8, color: '#888', fontFamily: 'Helvetica-Bold' },
+  splitValue: { flex: 1, fontSize: 8, color: '#555' },
 });
 
 function vnd(amount: number): string {
@@ -79,11 +82,26 @@ function fmtDate(date: Date): string {
   return new Date(date).toLocaleDateString('vi-VN');
 }
 
+const SETTLEMENT_STATUS_VI: Record<string, string> = {
+  PENDING: 'Chờ xác nhận',
+  CONFIRMED: 'Đã xác nhận',
+};
+
+function fmtSettlementStatus(status: string): string {
+  return SETTLEMENT_STATUS_VI[status] ?? status;
+}
+
 const el = React.createElement;
 
 function buildDocument(input: PdfInput): React.ReactElement<DocumentProps> {
   const { event, balances } = input;
   const totalExpenses = event.expenses.reduce((s, e) => s + e.amount, 0);
+
+  const expenseDates = event.expenses.map((e) => new Date(e.createdAt).getTime());
+  const dateRangeText =
+    expenseDates.length > 0
+      ? `${fmtDate(new Date(Math.min(...expenseDates)))} – ${fmtDate(new Date(Math.max(...expenseDates)))}`
+      : fmtDate(event.createdAt);
 
   return el(
     Document,
@@ -97,7 +115,7 @@ function buildDocument(input: PdfInput): React.ReactElement<DocumentProps> {
       el(
         Text,
         { style: S.subtitle },
-        `Tạo ngày: ${fmtDate(event.createdAt)}  |  Loại: ${event.type}  |  Trạng thái: ${event.status}`,
+        `Khoảng thời gian: ${dateRangeText}  |  Loại: ${event.type}  |  Trạng thái: ${event.status}`,
       ),
       ...(event.description
         ? [
@@ -126,7 +144,7 @@ function buildDocument(input: PdfInput): React.ReactElement<DocumentProps> {
         el(Text, { style: S.col3 }, 'Ngày'),
         el(Text, { style: S.col4 }, 'Số tiền'),
       ),
-      ...event.expenses.map((exp, i) =>
+      ...event.expenses.flatMap((exp, i) => [
         el(
           View,
           { key: String(i), style: S.tableRow },
@@ -135,7 +153,21 @@ function buildDocument(input: PdfInput): React.ReactElement<DocumentProps> {
           el(Text, { style: S.col3 }, fmtDate(exp.createdAt)),
           el(Text, { style: S.col4 }, vnd(exp.amount)),
         ),
-      ),
+        ...(exp.splits.length > 0
+          ? [
+              el(
+                View,
+                { key: `split-${i}`, style: S.splitRow },
+                el(Text, { style: S.splitLabel }, 'Phân chia:'),
+                el(
+                  Text,
+                  { style: S.splitValue },
+                  exp.splits.map((s) => `${s.member.nickname}: ${vnd(s.amount)}`).join('  |  '),
+                ),
+              ),
+            ]
+          : []),
+      ]),
 
       // Balances
       el(Text, { style: S.sectionTitle }, 'Số dư thành viên'),
@@ -188,7 +220,7 @@ function buildDocument(input: PdfInput): React.ReactElement<DocumentProps> {
                 { key: String(i), style: S.tableRow },
                 el(Text, { style: S.col1 }, s.fromMember.nickname),
                 el(Text, { style: S.col1 }, s.toMember.nickname),
-                el(Text, { style: S.col2 }, s.status),
+                el(Text, { style: S.col2 }, fmtSettlementStatus(s.status)),
                 el(Text, { style: S.col4 }, vnd(s.amount)),
               ),
             ),

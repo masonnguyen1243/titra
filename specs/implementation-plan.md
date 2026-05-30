@@ -609,12 +609,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **PDF export — QA fixes**
 
-- [ ] Fix `export.controller.ts` + `layout.tsx`: restrict PDF export to ORGANIZER only — spec §5.9 says "Organizer can trigger PDF export"; `ExportService` only checks `isMember`, any active member can export; export button in layout also renders for all members (F1 — 🔴 high)
-- [ ] Fix `export.service.ts`: gửi download link đến email organizer sau khi tạo PDF — spec §5.9 yêu cầu "Download link is also sent to the organizer's email"; service trả `{ url }` nhưng không có email nào được gửi (F2 — 🟠 medium)
-- [ ] Fix `pdf.generator.ts`: thêm cột split vào bảng chi phí — spec §5.9 liệt kê "split" trong expense list; field `splits` đã được fetch trong `export.service.ts` nhưng không được render trong PDF (F3 — 🟠 medium)
-- [ ] Fix `pdf.generator.ts`: thêm date range của sự kiện vào header — spec §5.9 yêu cầu "event name and date range"; hiện tại chỉ hiển thị `createdAt`; có thể lấy `MIN/MAX(expense.createdAt)` từ danh sách expense đã fetch (F4 — 🟠 medium)
-- [ ] Fix `pdf.generator.ts`: dịch settlement status sang tiếng Việt — `s.status` render chuỗi enum tiếng Anh ("CONFIRMED", "PENDING"); phần còn lại của PDF dùng tiếng Việt (F5 — 🟡 low)
-- [ ] Security: PDF URL Cloudinary là public vĩnh viễn — bất kỳ ai có URL đều xem được toàn bộ dữ liệu tài chính không cần auth; cân nhắc dùng signed URL với TTL ngắn (S2 — 🟠 medium)
+- [x] Fix `export.controller.ts` + `layout.tsx`: restrict PDF export to ORGANIZER only — spec §5.9 says "Organizer can trigger PDF export"; `ExportService` only checks `isMember`, any active member can export; export button in layout also renders for all members (F1 — 🔴 high)
+- [x] Fix `export.service.ts`: gửi download link đến email organizer sau khi tạo PDF — spec §5.9 yêu cầu "Download link is also sent to the organizer's email"; service trả `{ url }` nhưng không có email nào được gửi (F2 — 🟠 medium)
+- [x] Fix `pdf.generator.ts`: thêm cột split vào bảng chi phí — spec §5.9 liệt kê "split" trong expense list; field `splits` đã được fetch trong `export.service.ts` nhưng không được render trong PDF (F3 — 🟠 medium)
+- [x] Fix `pdf.generator.ts`: thêm date range của sự kiện vào header — spec §5.9 yêu cầu "event name and date range"; hiện tại chỉ hiển thị `createdAt`; có thể lấy `MIN/MAX(expense.createdAt)` từ danh sách expense đã fetch (F4 — 🟠 medium)
+- [x] Fix `pdf.generator.ts`: dịch settlement status sang tiếng Việt — `s.status` render chuỗi enum tiếng Anh ("CONFIRMED", "PENDING"); phần còn lại của PDF dùng tiếng Việt (F5 — 🟡 low)
+- [x] Security: PDF URL Cloudinary là public vĩnh viễn — bất kỳ ai có URL đều xem được toàn bộ dữ liệu tài chính không cần auth; cân nhắc dùng signed URL với TTL ngắn (S2 — 🟠 medium)
 
 **Admin**
 
