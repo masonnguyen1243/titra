@@ -9,6 +9,7 @@ const MSG_SELECT = {
   member: {
     select: {
       id: true,
+      userId: true,
       nickname: true,
       user: { select: { name: true, avatarUrl: true } },
     },

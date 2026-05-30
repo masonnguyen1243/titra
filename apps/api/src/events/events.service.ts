@@ -59,6 +59,7 @@ export class EventsService {
             nickname: true,
             role: true,
             joinedAt: true,
+            lastReminderAt: true,
           },
         },
       },

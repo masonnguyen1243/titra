@@ -628,16 +628,16 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Balances — QA fixes (Round 2)**
 
-- [ ] Fix `formatVND` trong `balances/page.tsx`, `admin/page.tsx`, và `pdf.generator.ts`: làm tròn đến 1.000 ₫ cho display — spec §5.4 yêu cầu "Amounts are displayed rounded to nearest 1,000 ₫"; hiện tại `Math.round(amount)` chỉ làm tròn đến 1 đồng; cần `Math.round(amount / 1000) * 1000` (F5 — 🟡 medium)
+- [x] Fix `formatVND` trong `balances/page.tsx`, `admin/page.tsx`, và `pdf.generator.ts`: làm tròn đến 1.000 ₫ cho display — spec §5.4 yêu cầu "Amounts are displayed rounded to nearest 1,000 ₫"; hiện tại `Math.round(amount)` chỉ làm tròn đến 1 đồng; cần `Math.round(amount / 1000) * 1000` (F5 — 🟡 medium)
 
 **Reminders — QA fixes**
 
-- [ ] Fix `balances/page.tsx`: load `lastReminderAt` từ server khi mount — spec §5.7 yêu cầu "Organizer sees a timestamp of the last reminder sent to each member"; hiện tại state reset về `{}` mỗi lần reload nên organizer không thấy timestamp cũ; cần `EventMember.lastReminderAt` được trả về trong event detail hoặc một endpoint riêng (M1 — 🟠 medium)
+- [x] Fix `balances/page.tsx`: load `lastReminderAt` từ server khi mount — spec §5.7 yêu cầu "Organizer sees a timestamp of the last reminder sent to each member"; hiện tại state reset về `{}` mỗi lần reload nên organizer không thấy timestamp cũ; cần `EventMember.lastReminderAt` được trả về trong event detail hoặc một endpoint riêng (M1 — 🟠 medium)
 
 **Chat — QA fixes (Round 2)**
 
-- [ ] Fix `chat/page.tsx`: xác định `isMe` bằng user ID thay vì display name — `senderName(msg) === me.name` sẽ hiển thị tin nhắn của người khác là "của mình" nếu hai user cùng tên; cần thêm `userId` vào `ApiMessage.member` response và so sánh với `me.id` (S1 — 🟡 medium)
-- [ ] Thêm nút "Tải thêm" để xem tin nhắn cũ hơn — backend hỗ trợ cursor pagination; UI chỉ load 50 tin nhắn mới nhất và không có cách xem lịch sử cũ hơn; `useInfiniteQuery` đã được setup sẵn (M3 — 🟡 low)
+- [x] Fix `chat/page.tsx`: xác định `isMe` bằng user ID thay vì display name — `senderName(msg) === me.name` sẽ hiển thị tin nhắn của người khác là "của mình" nếu hai user cùng tên; cần thêm `userId` vào `ApiMessage.member` response và so sánh với `me.id` (S1 — 🟡 medium)
+- [x] Thêm nút "Tải thêm" để xem tin nhắn cũ hơn — backend hỗ trợ cursor pagination; UI chỉ load 50 tin nhắn mới nhất và không có cách xem lịch sử cũ hơn; `useInfiniteQuery` đã được setup sẵn (M3 — 🟡 low)
 
 ---
 

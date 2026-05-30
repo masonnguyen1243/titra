@@ -33,7 +33,7 @@ type PendingAction =
 const PAGE_SIZE = 20;
 
 function formatVND(amount: number): string {
-  return Math.round(amount).toLocaleString('vi-VN') + ' ₫';
+  return (Math.round(amount / 1000) * 1000).toLocaleString('vi-VN') + ' ₫';
 }
 
 function formatDate(iso: string): string {

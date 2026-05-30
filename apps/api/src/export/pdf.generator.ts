@@ -75,7 +75,7 @@ const S = StyleSheet.create({
 });
 
 function vnd(amount: number): string {
-  return amount.toLocaleString('vi-VN') + ' ₫';
+  return (Math.round(amount / 1000) * 1000).toLocaleString('vi-VN') + ' ₫';
 }
 
 function fmtDate(date: Date): string {

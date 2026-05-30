@@ -1,4 +1,4 @@
-# AGENTS.md
+# CLAUDE.md
 
 Guidelines for AI agents working on the Titra codebase.
 
@@ -31,15 +31,15 @@ Guidelines for AI agents working on the Titra codebase.
 
 ## Stack Rules (non-negotiable)
 
-| Area | Rule |
-|------|------|
+| Area     | Rule                                                                                                  |
+| -------- | ----------------------------------------------------------------------------------------------------- |
 | Frontend | Next.js 15 App Router only. shadcn/ui for components. TailwindCSS for styling. No other UI libraries. |
-| Backend | NestJS modular architecture. Prisma for all DB access — no raw SQL. REST under `/api/v1`. |
-| Forms | React Hook Form + Zod. |
-| State | TanStack Query for server state. Zustand for client state. |
-| Database | PostgreSQL. Amounts stored as integers (VND, no decimals). Soft-delete on user-created records. |
-| Auth | JWT access token (15 min) + refresh token (7 days) in HttpOnly cookies. |
-| Types | TypeScript strict mode. No `any` without a comment explaining why. |
+| Backend  | NestJS modular architecture. Prisma for all DB access — no raw SQL. REST under `/api/v1`.             |
+| Forms    | React Hook Form + Zod.                                                                                |
+| State    | TanStack Query for server state. Zustand for client state.                                            |
+| Database | PostgreSQL. Amounts stored as integers (VND, no decimals). Soft-delete on user-created records.       |
+| Auth     | JWT access token (15 min) + refresh token (7 days) in HttpOnly cookies.                               |
+| Types    | TypeScript strict mode. No `any` without a comment explaining why.                                    |
 
 ---
 

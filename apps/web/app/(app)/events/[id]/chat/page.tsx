@@ -4,7 +4,7 @@ import { use, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MessageCircle, Send, WifiOff } from 'lucide-react';
+import { ChevronUp, Loader2, MessageCircle, Send, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Avatar } from '@/components/ui/avatar';
@@ -17,9 +17,15 @@ interface ApiMessage {
   createdAt: string;
   member: {
     id: string;
+    userId: string | null;
     nickname: string | null;
     user: { name: string; avatarUrl: string | null } | null;
   };
+}
+
+interface MessagesResponse {
+  messages: ApiMessage[];
+  nextCursor: string | null;
 }
 
 function senderName(msg: ApiMessage): string {
@@ -58,14 +64,28 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
   const [messages, setMessages] = useState<ApiMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
 
   const { data: me } = useMe();
   const socketRef = useRef<Socket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  // 'bottom' = scroll to newest after update; 'preserve' = keep current scroll position
+  const scrollActionRef = useRef<'bottom' | 'preserve'>('bottom');
+  const prevScrollHeightRef = useRef(0);
 
-  // Auto-scroll on new messages
+  // Auto-scroll to newest message on initial load and incoming WS messages.
+  // When loading older history, restore the viewport position instead.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (scrollActionRef.current === 'preserve') {
+      if (listRef.current) {
+        listRef.current.scrollTop = listRef.current.scrollHeight - prevScrollHeightRef.current;
+      }
+      scrollActionRef.current = 'bottom';
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   // WebSocket + polling fallback
@@ -78,7 +98,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       if (mounted) setStatus('polling');
       polling = setInterval(() => {
         void api
-          .get<{ messages: ApiMessage[] }>(`/events/${id}/messages`)
+          .get<MessagesResponse>(`/events/${id}/messages`)
           .then((data) => {
             if (mounted) setMessages((prev) => mergeMessages(prev, data.messages));
           })
@@ -95,9 +115,12 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
 
     // Initial message load via api.ts wrapper (handles 401 refresh + 30s timeout)
     void api
-      .get<{ messages: ApiMessage[] }>(`/events/${id}/messages`)
+      .get<MessagesResponse>(`/events/${id}/messages`)
       .then((data) => {
-        if (mounted) setMessages(data.messages);
+        if (mounted) {
+          setMessages(data.messages);
+          setNextCursor(data.nextCursor);
+        }
       })
       .catch(() => {});
 
@@ -147,6 +170,25 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     };
   }, [id]);
 
+  async function handleLoadOlder() {
+    if (!nextCursor || loadingOlder) return;
+    setLoadingOlder(true);
+    // Snapshot scroll height before React re-renders so we can restore position
+    prevScrollHeightRef.current = listRef.current?.scrollHeight ?? 0;
+    scrollActionRef.current = 'preserve';
+    try {
+      const data = await api.get<MessagesResponse>(
+        `/events/${id}/messages?cursor=${encodeURIComponent(nextCursor)}`,
+      );
+      setMessages((prev) => mergeMessages(prev, data.messages));
+      setNextCursor(data.nextCursor);
+    } catch {
+      scrollActionRef.current = 'bottom';
+    } finally {
+      setLoadingOlder(false);
+    }
+  }
+
   async function handleSend() {
     const text = draft.trim();
     if (!text) return;
@@ -194,7 +236,27 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       )}
 
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-1">
+      <div ref={listRef} className="flex-1 overflow-y-auto p-4 space-y-1">
+        {/* Load older messages button — only shown when more history exists */}
+        {nextCursor && (
+          <div className="flex justify-center pb-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground gap-1.5"
+              onClick={() => void handleLoadOlder()}
+              disabled={loadingOlder}
+            >
+              {loadingOlder ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <ChevronUp className="h-3 w-3" />
+              )}
+              {loadingOlder ? 'Đang tải…' : 'Tải thêm tin nhắn cũ'}
+            </Button>
+          </div>
+        )}
+
         {messages.length === 0 ? (
           <EmptyState
             icon={MessageCircle}
@@ -204,7 +266,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
           />
         ) : (
           messages.map((msg, i) => {
-            const isMe = !!me && senderName(msg) === me.name;
+            const isMe = !!me && msg.member.userId === me.id;
             const prev = messages[i - 1];
             const showDateSep = !prev || !isSameDay(prev.createdAt, msg.createdAt);
             const showSender =

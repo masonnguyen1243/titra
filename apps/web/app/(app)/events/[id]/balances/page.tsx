@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { TrendingUp, TrendingDown, Minus, ArrowRight, PartyPopper, Bell, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,7 +16,7 @@ import { useSendReminder } from '@/lib/hooks/use-notifications';
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 function formatVND(amount: number): string {
-  return Math.round(amount).toLocaleString('vi-VN') + ' ₫';
+  return (Math.round(amount / 1000) * 1000).toLocaleString('vi-VN') + ' ₫';
 }
 
 function getRemainingHours(lastReminderAt: string): number {
@@ -67,6 +67,15 @@ export default function BalancesPage({ params }: { params: Promise<{ id: string 
 
   const [sendingMemberId, setSendingMemberId] = useState<string | null>(null);
   const [lastRemindedAt, setLastRemindedAt] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!event) return;
+    const initial: Record<string, string> = {};
+    for (const m of event.members) {
+      if (m.lastReminderAt) initial[m.id] = m.lastReminderAt;
+    }
+    setLastRemindedAt(initial);
+  }, [event]);
 
   const myMember = event?.members.find((m) => m.userId === me?.id);
   const isOrganizer = myMember?.role === 'ORGANIZER';

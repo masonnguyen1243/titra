@@ -26,6 +26,7 @@ export interface EventMember {
   nickname: string;
   role: MemberRole;
   joinedAt: string;
+  lastReminderAt: string | null;
 }
 
 export interface EventDetail extends Omit<EventListItem, '_count'> {
