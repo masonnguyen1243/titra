@@ -321,7 +321,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Fix `EVENT_LIST_SELECT`: thêm filter cho `_count.members` chỉ đếm member `status: ACTIVE, removedAt: null` — hiện tại số lượng thành viên trên dashboard bao gồm cả PENDING và đã bị remove (F4)
 - [x] Fix URL format mâu thuẫn: `getInvite` trả về `/join/:eventInviteToken` còn `sendEventInviteEmail` gửi `/invitations/accept?token=:memberInviteToken` — hai flow dùng hai loại token khác nhau trỏ vào hai trang frontend khác nhau; cần thống nhất và tạo trang frontend tương ứng (F5)
 - [x] Fix `removeMember`: thêm guard chặn xoá thành viên khi event có status `SETTLED` hoặc `ARCHIVED` — xoá member sau khi chốt có thể làm hỏng lịch sử balance (M4)
+
 - [~] ~~Fix `addMember` guest path: kiểm tra và chặn thêm guest trùng `nickname` trong cùng event~~ — bỏ qua, nickname không phải unique identifier (hai người có thể cùng tên) (M5)
+
 - [x] Fix `addMember` enumeration (partial): email không tồn tại → `{ ok: true }`, nhưng email bị deactivate/unverified → trả `400` với message cụ thể — lộ thông tin tài khoản. Cần áp dụng enumeration-safe nhất quán cho cả ba trường hợp (S1)
 - [x] Fix `addMember`: ẩn `inviteToken` và `inviteTokenExpiry` khỏi response trả về cho organizer — token chỉ nên được giao đến người được mời qua email, không qua API response (S2)
 - [x] Thêm rate limiting per-target cho `POST /events/:id/members`: giới hạn số lần invite đến một email cụ thể trong khoảng thời gian nhất định để tránh spam inbox (S3)
@@ -647,13 +649,13 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 **Form validation (React Hook Form + Zod)**
 
-- [ ] Login: required fields, valid email format
-- [ ] Register: required fields, valid email, password min 8 chars, passwords match — **lưu ý:** form register hiện thiếu cả trường "confirm password" lẫn kiểm tra độ dài tối thiểu ở client; người dùng nhập sai password không phát hiện ra cho đến khi đăng nhập thất bại
-- [ ] Add `@MaxLength` to backend DTOs: `name` ≤ 100 chars, `password` ≤ 128 chars — no upper bounds currently; omitting lets attackers force bcrypt to process oversized input (M8)
-- [ ] Create Event: name required, type required
-- [ ] Add Expense: amount > 0 required, description required, custom split must sum to total
-- [ ] Record Settlement: amount > 0, method required
-- [ ] Chat input: non-empty message
+- [x] Login: required fields, valid email format
+- [x] Register: required fields, valid email, password min 8 chars, passwords match — **lưu ý:** form register hiện thiếu cả trường "confirm password" lẫn kiểm tra độ dài tối thiểu ở client; người dùng nhập sai password không phát hiện ra cho đến khi đăng nhập thất bại
+- [x] Add `@MaxLength` to backend DTOs: `name` ≤ 100 chars, `password` ≤ 128 chars — no upper bounds currently; omitting lets attackers force bcrypt to process oversized input (M8)
+- [x] Create Event: name required, type required
+- [x] Add Expense: amount > 0 required, description required, custom split must sum to total
+- [x] Record Settlement: amount > 0, method required
+- [x] Chat input: non-empty message
 
 **API error handling**
 

@@ -81,13 +81,17 @@ export default function RecordSettlementDialog({
   const [proofError, setProofError] = useState('');
   const [uploadedProofUrl, setUploadedProofUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [formTouched, setFormTouched] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const cloudinaryUpload = useCloudinaryUpload();
 
   const amount = parseInt(amountRaw, 10) || 0;
   const samePersonError = fromId !== '' && fromId === toId;
-  const isValid = fromId !== '' && toId !== '' && !samePersonError && amount > 0;
+  const isValid = fromId !== '' && toId !== '' && !samePersonError && amount > 0 && method !== null;
+
+  const amountError = formTouched && amount <= 0 ? 'Số tiền phải lớn hơn 0' : '';
+  const methodError = formTouched && !method ? 'Vui lòng chọn hình thức thanh toán' : '';
 
   function resetForm() {
     setFromId(members[0]?.id ?? '');
@@ -100,6 +104,7 @@ export default function RecordSettlementDialog({
     setProofError('');
     setUploadedProofUrl(null);
     setIsUploading(false);
+    setFormTouched(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -149,6 +154,7 @@ export default function RecordSettlementDialog({
   }
 
   async function handleSubmit() {
+    setFormTouched(true);
     if (!isValid) return;
     try {
       await onAdd({
@@ -244,11 +250,13 @@ export default function RecordSettlementDialog({
               value={amountRaw}
               onChange={(e) => setAmountRaw(e.target.value.replace(/\D/g, ''))}
             />
-            {amount > 0 && (
+            {amountError ? (
+              <p className="text-xs text-destructive">{amountError}</p>
+            ) : amount > 0 ? (
               <p className="text-xs text-muted-foreground tabular-nums">
                 {amount.toLocaleString('vi-VN')} ₫
               </p>
-            )}
+            ) : null}
           </div>
 
           {/* Payment method */}
@@ -276,6 +284,7 @@ export default function RecordSettlementDialog({
                 </button>
               ))}
             </div>
+            {methodError && <p className="text-xs text-destructive">{methodError}</p>}
           </div>
 
           {/* MoMo / VNPay deep-link */}

@@ -1,33 +1,46 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useLogin } from '@/lib/hooks/use-auth';
 import { ApiError } from '@/lib/api';
 
 const GOOGLE_AUTH_URL =
   (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000') + '/api/v1/auth/google';
 
+const loginSchema = z.object({
+  email: z
+    .string()
+    .min(1, 'Vui lòng nhập email')
+    .email('Email không hợp lệ'),
+  password: z.string().min(1, 'Vui lòng nhập mật khẩu'),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+
 export default function LoginPage() {
   const router = useRouter();
   const { mutate: login, isPending } = useLogin();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
-  // Show error toast when the backend redirects back with ?error=oauth_failed
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('error') === 'oauth_failed') {
       toast.error('Đăng nhập Google thất bại. Vui lòng thử lại.');
-      // Remove the query param so it doesn't persist on refresh
       const url = new URL(window.location.href);
       url.searchParams.delete('error');
       window.history.replaceState(null, '', url.toString());
@@ -38,25 +51,19 @@ export default function LoginPage() {
     window.location.href = GOOGLE_AUTH_URL;
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    login(
-      { email, password },
-      {
-        onSuccess: () => {
-          const returnUrl = sessionStorage.getItem('returnUrl') ?? '/dashboard';
-          sessionStorage.removeItem('returnUrl');
-          router.push(returnUrl);
-        },
-        onError: (err) => {
-          const message =
-            err instanceof ApiError
-              ? err.message
-              : 'Đã xảy ra lỗi, vui lòng thử lại';
-          toast.error(message);
-        },
+  function onSubmit(values: LoginFormValues) {
+    login(values, {
+      onSuccess: () => {
+        const returnUrl = sessionStorage.getItem('returnUrl') ?? '/dashboard';
+        sessionStorage.removeItem('returnUrl');
+        router.push(returnUrl);
       },
-    );
+      onError: (err) => {
+        const message =
+          err instanceof ApiError ? err.message : 'Đã xảy ra lỗi, vui lòng thử lại';
+        toast.error(message);
+      },
+    });
   }
 
   return (
@@ -73,47 +80,61 @@ export default function LoginPage() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="ban@example.com"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isPending}
-                required
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="ban@example.com"
+                        autoComplete="email"
+                        disabled={isPending}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Mật khẩu</Label>
-                <Link
-                  href="/forgot-password"
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Quên mật khẩu?
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isPending}
-                required
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Mật khẩu</FormLabel>
+                      <Link
+                        href="/forgot-password"
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Quên mật khẩu?
+                      </Link>
+                    </div>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        autoComplete="current-password"
+                        disabled={isPending}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <Button className="w-full" type="submit" disabled={isPending}>
-              {isPending ? 'Đang đăng nhập…' : 'Đăng nhập'}
-            </Button>
-          </form>
+              <Button className="w-full" type="submit" disabled={isPending}>
+                {isPending ? 'Đang đăng nhập…' : 'Đăng nhập'}
+              </Button>
+            </form>
+          </Form>
 
           <div className="relative">
             <Separator />

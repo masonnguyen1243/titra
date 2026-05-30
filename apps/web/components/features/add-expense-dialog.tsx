@@ -113,6 +113,8 @@ export default function AddExpenseDialog({
   const [receiptError, setReceiptError] = useState('');
   // ── submit error state (inline message shown inside dialog on failure) ───────
   const [submitError, setSubmitError] = useState('');
+  // ── tracks whether the user has attempted to submit at least once ─────────────
+  const [formTouched, setFormTouched] = useState(false);
   /** URL after a successful Cloudinary upload */
   const [uploadedReceiptUrl, setUploadedReceiptUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -184,6 +186,20 @@ export default function AddExpenseDialog({
     !isSubmitting &&
     (splitMode === 'EQUAL' ? equalCount > 0 : !customMismatch);
 
+  // Per-field error messages — only shown after the user attempts to submit
+  const descError = formTouched && description.trim().length === 0
+    ? 'Vui lòng nhập mô tả chi phí'
+    : '';
+  const amountError = formTouched && amount <= 0
+    ? 'Số tiền phải lớn hơn 0'
+    : '';
+  const equalError = formTouched && splitMode === 'EQUAL' && equalCount === 0
+    ? 'Chọn ít nhất một thành viên'
+    : '';
+  const splitSumError = formTouched && splitMode === 'CUSTOM' && customMismatch
+    ? 'Tổng chia chưa khớp với số tiền chi phí'
+    : '';
+
   // ── handlers ─────────────────────────────────────────────────────────────────
   function resetForm() {
     setDescription('');
@@ -199,6 +215,7 @@ export default function AddExpenseDialog({
     setIsUploading(false);
     setSubmitError('');
     setReceiptExplicitlyRemoved(false);
+    setFormTouched(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -262,6 +279,7 @@ export default function AddExpenseDialog({
   }
 
   async function handleSubmit() {
+    setFormTouched(true);
     if (!isValid) return;
 
     const receiptPayload: { receiptUrl?: string | null } = uploadedReceiptUrl
@@ -327,6 +345,7 @@ export default function AddExpenseDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+            {descError && <p className="text-xs text-destructive">{descError}</p>}
           </div>
 
           {/* Amount */}
@@ -344,11 +363,13 @@ export default function AddExpenseDialog({
               value={amountRaw}
               onChange={(e) => setAmountRaw(e.target.value.replace(/\D/g, ''))}
             />
-            {amount > 0 && (
+            {amountError ? (
+              <p className="text-xs text-destructive">{amountError}</p>
+            ) : amount > 0 ? (
               <p className="text-xs text-muted-foreground tabular-nums">
                 {amount.toLocaleString('vi-VN')} ₫
               </p>
-            )}
+            ) : null}
           </div>
 
           {/* Category */}
@@ -445,8 +466,8 @@ export default function AddExpenseDialog({
                       </label>
                     );
                   })}
-                  {equalCount === 0 && (
-                    <p className="text-xs text-destructive">Chọn ít nhất một thành viên.</p>
+                  {equalError && (
+                    <p className="text-xs text-destructive">{equalError}</p>
                   )}
                 </div>
               </TabsContent>
@@ -489,9 +510,9 @@ export default function AddExpenseDialog({
                       )}
                     </span>
                   </div>
-                  {customMismatch && (
+                  {(customMismatch || splitSumError) && (
                     <p className="text-xs text-destructive">
-                      Tổng chia chưa khớp với số tiền chi phí.
+                      {splitSumError || 'Tổng chia chưa khớp với số tiền chi phí.'}
                     </p>
                   )}
                 </div>
@@ -574,7 +595,7 @@ export default function AddExpenseDialog({
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={busy}>
             Huỷ
           </Button>
-          <Button onClick={handleSubmit} disabled={!isValid || busy}>
+          <Button onClick={handleSubmit} disabled={busy}>
             {busy && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
             {isUploading ? 'Đang tải ảnh…' : submitLabel}
           </Button>

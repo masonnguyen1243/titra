@@ -1,5 +1,74 @@
 # Change Log — Titra
 
+## 2026-05-30 — Phase 5: Chat input non-empty validation (verified complete)
+
+**Tasks completed:**
+
+- `chat/page.tsx` already enforces non-empty message on all three send paths:
+  - Send button: `disabled={!draft.trim()}` — greyed out for empty/whitespace input.
+  - Handler guard: `const text = draft.trim(); if (!text) return;` — early exit.
+  - Enter key: calls `handleSend()`, same guard applies.
+- No code change needed; marked complete after verification.
+
+## 2026-05-30 — Phase 5: Record Settlement form validation (amount > 0, method required)
+
+**Tasks completed:**
+
+- `record-settlement-dialog.tsx`: added `formTouched` state (set to `true` on first submit click, reset on dialog close), matching the pattern applied to `add-expense-dialog.tsx`.
+- Derived two error strings: `amountError` (shown when `formTouched && amount <= 0`) and `methodError` (shown when `formTouched && !method`, guard against future null state).
+- `amountError` renders below the amount input, replacing the formatted-amount hint while the field is invalid.
+- `methodError` renders below the payment-method pill row.
+- `isValid` now also requires `method !== null` for defensive correctness.
+- Reset `formTouched` in `resetForm()` so reopening the dialog starts fresh.
+
+## 2026-05-30 — Phase 5: Add Expense form validation (field-level error messages)
+
+**Tasks completed:**
+
+- `add-expense-dialog.tsx`: added `formTouched` state (set to `true` on first submit click, reset on dialog close).
+- Derived four error strings from `formTouched` + current values: `descError`, `amountError`, `equalError`, `splitSumError`.
+- Renders `descError` below the description input; `amountError` below the amount input (replaces the formatted-amount hint while invalid); `equalError` below the equal-split member list; `splitSumError` below the custom-split total row (the existing live mismatch indicator also remains).
+- Submit button is now `disabled={busy}` only — no longer silently blocked by `!isValid`; clicking it with invalid fields shows all relevant error messages at once.
+- Reset `formTouched` on dialog close so reopening the dialog starts fresh.
+
+## 2026-05-30 — Phase 5: Create Event form validation (React Hook Form + Zod)
+
+**Tasks completed:**
+
+- Rewrote `apps/web/app/(app)/events/new/page.tsx` to use `useForm` with `zodResolver`.
+- Zod schema: `name` required (min 1 char); `type` required (enum `TRIP | MEAL | OTHER`); `description` optional.
+- The type button group is now controlled via `FormField` / `field.onChange` so Zod validation runs on it.
+- Removed the old `disabled={!name.trim()}` guard on the submit button — RHF now handles blocking invalid submissions.
+- Cover photo state (`coverPreview`, `coverError`, file ref) remains outside RHF since it is not yet uploaded.
+- All error messages appear in Vietnamese below each field via `<FormMessage>`.
+
+## 2026-05-30 — Phase 5: Add @MaxLength to backend auth DTOs (M8)
+
+**Tasks completed:**
+
+- `auth/dto/register.dto.ts`: added `@MaxLength(100)` on `name`, `@MaxLength(128)` on `password`.
+- `auth/dto/login.dto.ts`: added `@MaxLength(128)` on `password`.
+- `auth/dto/reset-password.dto.ts`: added `@MaxLength(128)` on `password` (with Vietnamese error message).
+- `users/dto/update-profile.dto.ts` already had `@MaxLength(100)` on `name` — no change needed.
+- Prevents bcrypt DoS via oversized password inputs; NestJS `ValidationPipe` (globally registered) will reject requests with 400 before any hashing occurs.
+
+## 2026-05-30 — Phase 5: Register form validation (React Hook Form + Zod)
+
+**Tasks completed:**
+
+- Rewrote `apps/web/app/(auth)/register/page.tsx` to use `useForm` with `zodResolver`.
+- Added "Xác nhận mật khẩu" (confirm password) field — was missing entirely before.
+- Zod schema enforces: name required; email required + valid format; password required + min 8 chars; confirm password must match password. All error messages in Vietnamese.
+- Submit API call only receives `{ name, email, password }` — `confirmPassword` is stripped client-side.
+
+## 2026-05-30 — Phase 5: Login form validation (React Hook Form + Zod)
+
+**Tasks completed:**
+
+- Installed `react-hook-form`, `@hookform/resolvers`, and `zod` in `apps/web`.
+- Created `apps/web/components/ui/form.tsx` — shadcn-style Form component wrapping react-hook-form (`Form`, `FormField`, `FormItem`, `FormLabel`, `FormControl`, `FormDescription`, `FormMessage`).
+- Rewrote `apps/web/app/(auth)/login/page.tsx` to use `useForm` with `zodResolver`. Schema enforces: email is required + valid format; password is required. Validation errors render in Vietnamese below each field via `<FormMessage>`. Added `noValidate` to suppress browser native validation.
+
 ## 2026-05-30 (193) — Add "Tải thêm" button to load older chat messages (M3)
 
 **Tasks completed:**
